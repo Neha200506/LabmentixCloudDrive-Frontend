@@ -39,6 +39,7 @@ export default function Login({ onNavigate }) {
       setTimeout(() => {
         setIsSubmitting(false);
         setSuccessMessage('Client validation successful! (Backend integration is set for Day 9)');
+        onNavigate('dashboard', email);
       }, 1000);
     }
   };

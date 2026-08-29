@@ -30,8 +30,27 @@ export default function Signup({ onNavigate }) {
     
     if (!password) {
       tempErrors.password = 'Password is required';
-    } else if (password.length < 6) {
-      tempErrors.password = 'Password must be at least 6 characters';
+    } else {
+      const requirements = [];
+      if (password.length < 8) {
+        requirements.push('at least 8 characters');
+      }
+      if (!/[A-Z]/.test(password)) {
+        requirements.push('at least 1 uppercase letter');
+      }
+      if (!/[a-z]/.test(password)) {
+        requirements.push('at least 1 lowercase letter');
+      }
+      if (!/[0-9]/.test(password)) {
+        requirements.push('at least 1 number');
+      }
+      if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+        requirements.push('at least 1 special character');
+      }
+      
+      if (requirements.length > 0) {
+        tempErrors.password = `Password is missing: ${requirements.join(', ')}`;
+      }
     }
     
     if (password !== confirmPassword) {
@@ -53,6 +72,7 @@ export default function Signup({ onNavigate }) {
       setTimeout(() => {
         setIsSubmitting(false);
         setSuccessMessage('Account validation successful! (Backend integration is set for Day 9)');
+        onNavigate('dashboard', email, name);
       }, 1000);
     }
   };
