@@ -1,315 +1,46 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
-// ==========================================
-// SVG ICONS (Nexora Dark ThemeAccents)
-// ==========================================
-
-const LogoIcon = () => (
-  <svg className="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
-  </svg>
-);
-
-const FolderIcon = ({ className = "w-5 h-5 text-indigo-400/80" }) => (
-  <svg className={className} viewBox="0 0 20 20" fill="currentColor">
-    <path d="M2 6a2 2 0 012-2h4l2 2h4a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-  </svg>
-);
-
-// File types matching dark theme guidelines
-const FileIconPdf = () => (
-  <svg className="w-5 h-5 text-rose-500/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m.75 12h9m9 3H12m1.5-4.5H12M3.75 6H7.5m-.75 3h7.5M3.75 21h16.5c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H16.5L12 3H5.25A2.25 2.25 0 003 5.25v13.5A2.25 2.25 0 005.25 21z" />
-  </svg>
-);
-
-const FileIconImage = () => (
-  <svg className="w-5 h-5 text-purple-400/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-  </svg>
-);
-
-const FileIconCode = () => (
-  <svg className="w-5 h-5 text-amber-500/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
-  </svg>
-);
-
-const FileIconSheet = () => (
-  <svg className="w-5 h-5 text-emerald-500/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v16.5m16.5-16.5v16.5m-16.5-16.5h16.5m-16.5 16.5h16.5m-16.5-12h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5" />
-  </svg>
-);
-
-const FileIconDoc = () => (
-  <svg className="w-5 h-5 text-blue-400/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5-3H12M10.5 6H7.5m-.75 3h7.5M3.75 21h16.5c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H16.5L12 3H5.25A2.25 2.25 0 003 5.25v13.5A2.25 2.25 0 005.25 21z" />
-  </svg>
-);
-
-const FileIconZip = () => (
-  <svg className="w-5 h-5 text-slate-400/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.125a3.75 3.75 0 01-3.75 3.75H8.125a3.75 3.75 0 01-3.75-3.75L3.75 7.5m16.5 0V4.5a2.25 2.25 0 00-2.25-2.25H6a2.25 2.25 0 00-2.25 2.25V7.5m16.5 0H3.75m10.125 3.75h-3.75m3.75 3H10.125m3.75 3h-3.75" />
-  </svg>
-);
-
-const FileIconAudio = () => (
-  <svg className="w-5 h-5 text-cyan-400/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9 9l10.5-3m0 0v11.25M19.5 6l-10.5 3m0 0v11.25m0-11.25L3.75 10.5M3.75 10.5v10.5m0-10.5L9 9M9 19.5a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm10.5-3a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0z" />
-  </svg>
-);
-
-const FileIconDefault = () => (
-  <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5-3H12M10.5 6H7.5M3.75 21h16.5c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H16.5L12 3H5.25A2.25 2.25 0 003 5.25v13.5A2.25 2.25 0 005.25 21z" />
-  </svg>
-);
-
-// Map extensions to SVGs
-const getFileIcon = (ext) => {
-  const extension = ext ? ext.toLowerCase() : '';
-  if (extension === 'pdf') return <FileIconPdf />;
-  if (['png', 'jpg', 'jpeg', 'svg', 'gif'].includes(extension)) return <FileIconImage />;
-  if (['js', 'jsx', 'html', 'css', 'json', 'py', 'java', 'cpp', 'md'].includes(extension)) return <FileIconCode />;
-  if (['xls', 'xlsx', 'csv'].includes(extension)) return <FileIconSheet />;
-  if (['doc', 'docx', 'txt', 'rtf'].includes(extension)) return <FileIconDoc />;
-  if (['zip', 'tar', 'gz', 'rar', '7z'].includes(extension)) return <FileIconZip />;
-  if (['mp3', 'wav', 'ogg', 'm4a', 'flac'].includes(extension)) return <FileIconAudio />;
-  return <FileIconDefault />;
-};
-
-// Sidebar icons
-const HomeIcon = () => (
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-    <polyline points="9 22 9 12 15 12 15 22"/>
-  </svg>
-);
-
-const ProjectsIcon = () => (
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-    <line x1="12" x2="16" y1="11" y2="11"/>
-    <line x1="12" x2="16" y1="15" y2="15"/>
-  </svg>
-);
-
-const DriveIcon = () => (
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polygon points="12 2 2 22 22 22"/>
-  </svg>
-);
-
-const ComputerIcon = () => (
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect width="20" height="14" x="2" y="3" rx="2"/>
-    <line x1="8" x2="16" y1="21" y2="21"/>
-    <line x1="12" x2="12" y1="17" y2="21"/>
-  </svg>
-);
-
-const PeopleIcon = () => (
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-    <circle cx="9" cy="7" r="4"/>
-    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-  </svg>
-);
-
-const ClockIcon = () => (
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"/>
-    <polyline points="12 6 12 12 16 14"/>
-  </svg>
-);
-
-const StarIconOutline = () => (
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-  </svg>
-);
-
-const StarIconSolid = () => (
-  <svg className="w-4 h-4 text-amber-400 fill-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-  </svg>
-);
-
-const AlertIcon = () => (
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"/>
-    <line x1="12" x2="12" y1="8" y2="12"/>
-    <line x1="12" x2="12.01" y1="16" y2="16"/>
-  </svg>
-);
-
-const TrashIcon = () => (
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 6h18"/>
-    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-  </svg>
-);
-
-const CloudIcon = () => (
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17.5 19A5.5 5.5 0 0 0 22 13.5a5.5 5.5 0 0 0-5.5-5.5H16a7.5 7.5 0 0 0-14 3.5c0 1.2.3 2.3.8 3.3L3.5 19Z"/>
-  </svg>
-);
-
-const GridIcon = () => (
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect width="7" height="7" x="3" y="3" rx="1"/>
-    <rect width="7" height="7" x="14" y="3" rx="1"/>
-    <rect width="7" height="7" x="14" y="14" rx="1"/>
-    <rect width="7" height="7" x="3" y="14" rx="1"/>
-  </svg>
-);
-
-const ListIcon = () => (
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="3" x2="21" y1="6" y2="6"/>
-    <line x1="3" x2="21" y1="12" y2="12"/>
-    <line x1="3" x2="21" y1="18" y2="18"/>
-  </svg>
-);
-
-const ThreeDotsIcon = () => (
-  <svg className="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="1"/>
-    <circle cx="12" cy="5" r="1"/>
-    <circle cx="12" cy="19" r="1"/>
-  </svg>
-);
-
-// Utility icons
-const HelpIcon = () => (
-  <svg className="w-5 h-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"/>
-    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-    <line x1="12" x2="12.01" y1="17" y2="17"/>
-  </svg>
-);
-
-const SettingsIcon = () => (
-  <svg className="w-5 h-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="3"/>
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-  </svg>
-);
-
-const SearchIcon = () => (
-  <svg className="w-5 h-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8"/>
-    <line x1="21" x2="16.65" y1="21" y2="16.65"/>
-  </svg>
-);
-
-const AppsIcon = () => (
-  <svg className="w-5 h-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <rect width="4" height="4" x="4" y="4" rx="1"/>
-    <rect width="4" height="4" x="10" y="4" rx="1"/>
-    <rect width="4" height="4" x="16" y="4" rx="1"/>
-    <rect width="4" height="4" x="4" y="10" rx="1"/>
-    <rect width="4" height="4" x="10" y="10" rx="1"/>
-    <rect width="4" height="4" x="16" y="10" rx="1"/>
-    <rect width="4" height="4" x="4" y="16" rx="1"/>
-    <rect width="4" height="4" x="10" y="16" rx="1"/>
-    <rect width="4" height="4" x="16" y="16" rx="1"/>
-  </svg>
-);
-
-// Right Utilities
-const CalendarIcon = () => (
-  <svg className="w-5 h-5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
-    <line x1="16" x2="16" y1="2" y2="6"/>
-    <line x1="8" x2="8" y1="2" y2="6"/>
-    <line x1="3" x2="21" y1="10" y2="10"/>
-    <text x="12" y="18" fontSize="8" fontWeight="bold" textAnchor="middle" stroke="none" fill="currentColor">31</text>
-  </svg>
-);
-
-const KeepIcon = () => (
-  <svg className="w-5 h-5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .5 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/>
-    <line x1="9" x2="15" y1="18" y2="18"/>
-    <line x1="10" x2="14" y1="21" y2="21"/>
-  </svg>
-);
-
-const TasksIcon = () => (
-  <svg className="w-5 h-5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"/>
-    <polyline points="8 12 11 15 16 9"/>
-  </svg>
-);
-
-const ContactsIcon = () => (
-  <svg className="w-5 h-5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
-    <circle cx="12" cy="7" r="4"/>
-  </svg>
-);
-
-const PlusIcon = () => (
-  <svg className="w-5 h-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" x2="12" y1="5" y2="19"/>
-    <line x1="5" x2="19" y1="12" y2="12"/>
-  </svg>
-);
-
-// ==========================================
-// MOCK DATA
-// ==========================================
-
-const INITIAL_MOCK_ITEMS = [
-  // Root Folders
-  { id: 'f-1', name: 'Work Projects', type: 'folder', parentId: null, starred: true, shared: false, owner: 'Alex Rivera', updatedAt: '2026-08-28', size: '-' },
-  { id: 'f-2', name: 'Personal Documents', type: 'folder', parentId: null, starred: false, shared: false, owner: 'me', updatedAt: '2026-08-25', size: '-' },
-  { id: 'f-6', name: 'College Files', type: 'folder', parentId: null, starred: false, shared: false, owner: 'me', updatedAt: '2026-08-24', size: '-' },
-  { id: 'f-3', name: 'Nexora Codebase', type: 'folder', parentId: 'f-1', starred: true, shared: false, owner: 'me', updatedAt: '2026-08-29', size: '-' },
-  { id: 'f-4', name: 'Design Assets', type: 'folder', parentId: 'f-1', starred: false, shared: true, owner: 'Sarah Jenkins', updatedAt: '2026-08-27', size: '-' },
-  { id: 'f-5', name: 'Financial Sheets', type: 'folder', parentId: 'f-2', starred: false, shared: false, owner: 'me', updatedAt: '2026-08-14', size: '-' },
-
-  // Root Files
-  { id: '1', name: 'Nexora_Brand_Identity.pdf', type: 'file', extension: 'pdf', parentId: null, starred: true, shared: false, owner: 'me', updatedAt: '2026-08-28', size: '4.5 MB', reasonSuggested: 'You opened • 9:53 PM', location: 'My Drive' },
-  { id: '2', name: 'marketing_plan_v2.docx', type: 'file', extension: 'docx', parentId: null, starred: false, shared: true, owner: 'Sarah Jenkins', updatedAt: '2026-08-26', size: '240 KB', reasonSuggested: 'You edited • Aug 26', location: 'My Drive' },
-  { id: '3', name: 'audio_intro.mp3', type: 'file', extension: 'mp3', parentId: null, starred: false, shared: true, owner: 'Alex Rivera', updatedAt: '2026-08-24', size: '6.4 MB', reasonSuggested: 'You opened • Jun 2', location: 'My Drive' },
-  { id: '4', name: 'backup_archive.zip', type: 'file', extension: 'zip', parentId: null, starred: false, shared: false, owner: 'me', updatedAt: '2026-08-20', size: '142 MB', reasonSuggested: 'You uploaded • Aug 20', location: 'My Drive' },
-  { id: '5', name: 'abandoned_draft.txt', type: 'file', extension: 'txt', parentId: null, starred: false, shared: false, owner: 'me', inTrash: true, updatedAt: '2026-08-10', size: '12 KB', reasonSuggested: 'Deleted • Aug 10', location: 'Trash' },
-
-  // Items Inside f-1 (Work Projects)
-  { id: '6', name: 'ProjectSpecs_V1.pdf', type: 'file', extension: 'pdf', parentId: 'f-1', starred: false, shared: false, owner: 'Alex Rivera', updatedAt: '2026-08-20', size: '2.1 MB', reasonSuggested: 'You created • Aug 10', location: 'Work Projects' },
-
-  // Items Inside f-3 (Nexora Codebase)
-  { id: '7', name: 'App.jsx', type: 'file', extension: 'jsx', parentId: 'f-3', starred: false, shared: false, owner: 'me', updatedAt: '2026-08-29', size: '4 KB', reasonSuggested: 'You edited • Aug 29', location: 'Nexora Codebase' },
-  { id: '8', name: 'index.css', type: 'file', extension: 'css', parentId: 'f-3', starred: false, shared: false, owner: 'me', updatedAt: '2026-08-29', size: '2 KB', reasonSuggested: 'You opened • Aug 29', location: 'Nexora Codebase' },
-  { id: '9', name: 'package.json', type: 'file', extension: 'json', parentId: 'f-3', starred: false, shared: false, owner: 'me', updatedAt: '2026-08-29', size: '1 KB', reasonSuggested: 'You opened • Aug 29', location: 'Nexora Codebase' },
-  { id: '10', name: 'README.md', type: 'file', extension: 'md', parentId: 'f-3', starred: true, shared: false, owner: 'me', updatedAt: '2026-08-29', size: '10 KB', reasonSuggested: 'You created • Aug 29', location: 'Nexora Codebase' },
-
-  // Items Inside f-4 (Design Assets)
-  { id: '11', name: 'dashboard_mockup.png', type: 'file', extension: 'png', parentId: 'f-4', starred: true, shared: true, owner: 'Sarah Jenkins', updatedAt: '2026-08-27', size: '890 KB', reasonSuggested: 'You opened • Aug 18', location: 'Design Assets' },
-  { id: '12', name: 'landing_hero_draft.jpg', type: 'file', extension: 'jpg', parentId: 'f-4', starred: false, shared: true, owner: 'Sarah Jenkins', updatedAt: '2026-08-26', size: '1.4 MB', reasonSuggested: 'You edited • Aug 26', location: 'Design Assets' },
-
-  // Items Inside f-5 (Financial Sheets)
-  { id: '13', name: 'financial_forecast_2026.xlsx', type: 'file', extension: 'xlsx', parentId: 'f-5', starred: false, shared: false, owner: 'me', updatedAt: '2026-08-14', size: '1.2 MB', reasonSuggested: 'You edited • Aug 8', location: 'Financial Sheets' },
-  { id: '14', name: 'payroll_August.xlsx', type: 'file', extension: 'xlsx', parentId: 'f-5', starred: false, shared: false, owner: 'me', updatedAt: '2026-08-12', size: '980 KB', reasonSuggested: 'You opened • Aug 12', location: 'Financial Sheets' },
-
-  // Items Inside f-2 (Personal Documents)
-  { id: '15', name: 'vacation_itinerary.pdf', type: 'file', extension: 'pdf', parentId: 'f-2', starred: false, shared: false, owner: 'me', updatedAt: '2026-08-15', size: '1.8 MB', reasonSuggested: 'You created • Aug 15', location: 'Personal Documents' },
-  { id: '16', name: 'apartment_lease_signed.pdf', type: 'file', extension: 'pdf', parentId: 'f-2', starred: true, shared: false, owner: 'me', updatedAt: '2026-08-11', size: '3.6 MB', reasonSuggested: 'You opened • Aug 11', location: 'Personal Documents' },
-
-  // Items Inside f-6 (College Files)
-  { id: '17', name: 'chemistry_lab_report.pdf', type: 'file', extension: 'pdf', parentId: 'f-6', starred: false, shared: false, owner: 'me', updatedAt: '2026-08-23', size: '1.2 MB', reasonSuggested: 'You edited • Aug 23', location: 'College Files' },
-  { id: '18', name: 'history_essay_draft.docx', type: 'file', extension: 'docx', parentId: 'f-6', starred: true, shared: false, owner: 'me', updatedAt: '2026-08-22', size: '45 KB', reasonSuggested: 'You opened • Aug 22', location: 'College Files' }
-];
+import {
+  LogoIcon,
+  FolderIcon,
+  HomeIcon,
+  ProjectsIcon,
+  DriveIcon,
+  ComputerIcon,
+  PeopleIcon,
+  ClockIcon,
+  StarIconOutline,
+  StarIconSolid,
+  AlertIcon,
+  TrashIcon,
+  CloudIcon,
+  GridIcon,
+  ListIcon,
+  HelpIcon,
+  SettingsIcon,
+  SearchIcon,
+  AppsIcon,
+  CalendarIcon,
+  KeepIcon,
+  TasksIcon,
+  ContactsIcon,
+  PlusIcon
+} from '../components/Icons';
+import { formatSize, getFileIcon } from '../utils/dashboardUtils';
+import FilePreviewModal from '../components/FilePreviewModal';
 
 export default function Dashboard({ onNavigate, user }) {
-  const displayUser = user || { email: 'alex.rivera@nexora.io', name: 'Alex Rivera' };
-  const initials = displayUser.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-  const [items, setItems] = useState(INITIAL_MOCK_ITEMS);
+  const displayUser = user || { email: '', full_name: 'Nexora User' };
+  const displayName = displayUser.full_name || displayUser.name || 'Nexora User';
+  const initials = displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  const [items, setItems] = useState([]);
+  const [notification, setNotification] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounterRef = useRef(0);
+  const [selectedPreviewFile, setSelectedPreviewFile] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [previewTextContent, setPreviewTextContent] = useState('');
   const [activeTab, setActiveTab] = useState('drive'); // home, projects, drive, computers, shared, recent, starred, spam, trash, storage
   const [currentFolderId, setCurrentFolderId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -318,6 +49,488 @@ export default function Dashboard({ onNavigate, user }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNewMenuOpen, setIsNewMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!notification) return;
+    const timer = setTimeout(() => {
+      setNotification(null);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [notification]);
+
+  const showNotification = (type, message) => {
+    setNotification({ type, message });
+  };
+
+
+
+  const handleUploadFile = async (file) => {
+    if (!file) return;
+
+    const token = localStorage.getItem("token");
+    const formData = new FormData();
+    if (currentFolderId) {
+      formData.append("folder_id", currentFolderId);
+    }
+    formData.append("file", file);
+
+    try {
+      const response = await fetch("http://localhost:8080/api/files/upload", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "File upload failed");
+      }
+
+      const uploadedFile = data.file;
+      const newFileItem = {
+        id: uploadedFile.id,
+        name: uploadedFile.file_name,
+        type: "file",
+        extension: uploadedFile.file_name.split(".").pop().toLowerCase(),
+        parentId: uploadedFile.folder_id,
+        starred: false,
+        inTrash: false,
+        createdAt: uploadedFile.created_at,
+        updatedAt: uploadedFile.created_at ? new Date(uploadedFile.created_at).toISOString().split('T')[0] : '2026-08-30',
+        owner: 'me',
+        size: formatSize(uploadedFile.file_size),
+        location: 'My Drive',
+        reasonSuggested: 'Opened recently',
+      };
+
+      setItems((prev) => [newFileItem, ...prev]);
+      showNotification("success", `"${file.name}" uploaded successfully!`);
+      await fetchDashboardData(false);
+    } catch (error) {
+      showNotification("error", error.message);
+    }
+  };
+
+  const findOrCreateFolder = async (pathSegments, parentId, pathMap) => {
+    let currentParentId = parentId;
+    let accumulatedPath = "";
+
+    for (const segment of pathSegments) {
+      accumulatedPath = accumulatedPath ? `${accumulatedPath}/${segment}` : segment;
+
+      if (pathMap[accumulatedPath]) {
+        currentParentId = pathMap[accumulatedPath];
+        continue;
+      }
+
+      const existingFolder = items.find(
+        item => item.type === 'folder' &&
+          item.name.toLowerCase() === segment.toLowerCase() &&
+          (item.parentId === currentParentId || (!item.parentId && !currentParentId))
+      );
+
+      if (existingFolder) {
+        pathMap[accumulatedPath] = existingFolder.id;
+        currentParentId = existingFolder.id;
+      } else {
+        const token = localStorage.getItem("token");
+        const response = await fetch("http://localhost:8080/api/folders", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: segment,
+            parent_folder_id: currentParentId,
+          }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || `Failed to create folder "${segment}"`);
+        }
+
+        const newFolder = data.folder;
+        const newFolderItem = {
+          id: newFolder.id,
+          name: newFolder.name,
+          type: 'folder',
+          parentId: newFolder.parent_folder_id,
+          starred: false,
+          inTrash: false,
+          createdAt: newFolder.created_at,
+          updatedAt: '2026-08-30',
+        };
+
+        setItems((prev) => [newFolderItem, ...prev]);
+
+        pathMap[accumulatedPath] = newFolder.id;
+        currentParentId = newFolder.id;
+      }
+    }
+
+    return currentParentId;
+  };
+
+  const handleUploadFolder = async (files) => {
+    if (!files || files.length === 0) return;
+
+    const token = localStorage.getItem("token");
+    setIsLoading(true);
+    showNotification("success", `Starting folder upload (${files.length} files)...`);
+
+    const pathMap = {};
+    let successCount = 0;
+
+    try {
+      for (const file of files) {
+        const relativePath = file.webkitRelativePath;
+        if (!relativePath) {
+          await handleUploadFile(file);
+          successCount++;
+          continue;
+        }
+
+        const parts = relativePath.split('/');
+        parts.pop();
+        const pathSegments = parts;
+
+        const targetFolderId = await findOrCreateFolder(pathSegments, currentFolderId, pathMap);
+
+        const formData = new FormData();
+        if (targetFolderId) {
+          formData.append("folder_id", targetFolderId);
+        }
+        formData.append("file", file);
+
+        const response = await fetch("http://localhost:8080/api/files/upload", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || `Failed to upload "${file.name}"`);
+        }
+
+        const uploadedFile = data.file;
+        const newFileItem = {
+          id: uploadedFile.id,
+          name: uploadedFile.file_name,
+          type: "file",
+          extension: uploadedFile.file_name.split(".").pop().toLowerCase(),
+          parentId: uploadedFile.folder_id,
+          starred: false,
+          inTrash: false,
+          createdAt: uploadedFile.created_at,
+          updatedAt: uploadedFile.created_at ? new Date(uploadedFile.created_at).toISOString().split('T')[0] : '2026-08-30',
+          owner: 'me',
+          size: formatSize(uploadedFile.file_size),
+          location: 'My Drive',
+          reasonSuggested: 'Opened recently',
+        };
+
+        setItems((prev) => [newFileItem, ...prev]);
+        successCount++;
+      }
+
+      showNotification("success", `Folder uploaded successfully: ${successCount} files.`);
+    } catch (error) {
+      showNotification("error", error.message);
+    } finally {
+      setIsLoading(false);
+      await fetchDashboardData(false);
+    }
+  };
+
+  const handlePreviewFile = async (file) => {
+    if (!file) return;
+
+    setSelectedPreviewFile(file);
+    setPreviewLoading(true);
+    setPreviewUrl('');
+    setPreviewTextContent('');
+
+    const token = localStorage.getItem("token");
+    const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(file.extension);
+    const isPdf = file.extension === 'pdf';
+    const isText = ['txt', 'html', 'css', 'js', 'jsx', 'json', 'md'].includes(file.extension);
+
+    if (!isImage && !isPdf && !isText) {
+      setPreviewLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:8080/api/files/${file.id}/url`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to fetch file URL");
+      }
+
+      setPreviewUrl(data.url);
+
+      if (isText) {
+        const textRes = await fetch(data.url);
+        if (!textRes.ok) {
+          throw new Error("Failed to load text content");
+        }
+        const text = await textRes.text();
+        setPreviewTextContent(text);
+      }
+    } catch (error) {
+      showNotification("error", error.message);
+      setSelectedPreviewFile(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setSelectedPreviewFile(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const fetchDashboardData = async (showShimmer = true) => {
+    if (showShimmer) setIsLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      // 1. Fetch folders
+      let foldersUrl = 'http://localhost:8080/api/folders';
+      if (activeTab === 'trash') {
+        foldersUrl = 'http://localhost:8080/api/folders/trash';
+      }
+
+      const foldersRes = await fetch(foldersUrl, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const foldersData = await foldersRes.json();
+      const backendFolders = foldersData.folders || [];
+
+      // 2. Fetch files
+      let filesUrl = 'http://localhost:8080/api/files?limit=1000';
+      if (activeTab === 'trash') {
+        filesUrl = 'http://localhost:8080/api/files/trash';
+      } else if (activeTab === 'drive') {
+        filesUrl = `http://localhost:8080/api/files?limit=1000&folder_id=${currentFolderId || 'root'}`;
+      }
+
+      const filesRes = await fetch(filesUrl, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const filesData = await filesRes.json();
+      const backendFiles = filesData.files || [];
+
+      // Format folders
+      const formattedFolders = backendFolders.map(folder => ({
+        id: folder.id,
+        name: folder.name,
+        type: 'folder',
+        parentId: folder.parent_folder_id,
+        starred: folder.is_starred || false,
+        inTrash: activeTab === 'trash' || folder.deleted_at !== null,
+        createdAt: folder.created_at,
+        updatedAt: folder.created_at ? new Date(folder.created_at).toISOString().split('T')[0] : '2026-08-30',
+      }));
+
+      // Format files
+      const formattedFiles = backendFiles.map(file => ({
+        id: file.id,
+        name: file.file_name,
+        type: 'file',
+        extension: file.file_name.split('.').pop().toLowerCase(),
+        parentId: file.folder_id,
+        starred: file.is_starred || false,
+        inTrash: activeTab === 'trash' || file.deleted_at !== null,
+        createdAt: file.created_at,
+        updatedAt: file.created_at ? new Date(file.created_at).toISOString().split('T')[0] : '2026-08-30',
+        owner: 'me',
+        size: formatSize(file.file_size),
+        location: activeTab === 'trash' ? 'Trash' : 'My Drive',
+        reasonSuggested: 'Opened recently',
+      }));
+
+      setItems([...formattedFolders, ...formattedFiles]);
+    } catch (error) {
+      console.error('Fetch dashboard data error:', error);
+    } finally {
+      if (showShimmer) setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchDashboardData();
+    }, 0);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, currentFolderId]);
+
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    if (activeTab !== 'drive') return;
+    dragCounterRef.current++;
+    if (dragCounterRef.current === 1) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    if (activeTab !== 'drive') return;
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    dragCounterRef.current = 0;
+
+    if (activeTab !== 'drive') return;
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      await handleUploadFile(files[0]);
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener('dragenter', handleDragEnter);
+    window.addEventListener('dragover', handleDragOver);
+    window.addEventListener('dragleave', handleDragLeave);
+    window.addEventListener('drop', handleDrop);
+    return () => {
+      window.removeEventListener('dragenter', handleDragEnter);
+      window.removeEventListener('dragover', handleDragOver);
+      window.removeEventListener('dragleave', handleDragLeave);
+      window.removeEventListener('drop', handleDrop);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, currentFolderId]);
+
+  const handleRenameFolderPrompt = async (folderId, currentName) => {
+    const newName = prompt("Rename folder:", currentName);
+    if (!newName || newName === currentName) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8080/api/folders/${folderId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: newName }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to rename folder');
+      }
+
+      await fetchDashboardData();
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  const handleDeleteFolder = async (folderId) => {
+    if (!confirm("Are you sure you want to move this folder to trash?")) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8080/api/folders/${folderId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to delete folder');
+      }
+
+      await fetchDashboardData();
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  const handleRenameFilePrompt = async (fileId, currentName) => {
+    const newName = prompt("Rename file:", currentName);
+    if (!newName || newName === currentName) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8080/api/files/${fileId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ file_name: newName }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to rename file');
+      }
+
+      await fetchDashboardData();
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  const handleDeleteFile = async (fileId) => {
+    if (!confirm("Are you sure you want to move this file to trash?")) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8080/api/files/${fileId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to delete file');
+      }
+
+      await fetchDashboardData();
+    } catch (error) {
+      alert(error.message);
+    }
+  };
 
   // Filters State
   const [filterType, setFilterType] = useState('all');
@@ -406,25 +619,93 @@ export default function Dashboard({ onNavigate, user }) {
   };
 
   // Star / Unstar toggling
-  const handleToggleStar = (itemId, e) => {
+  const handleToggleStar = async (itemId, e) => {
     e.stopPropagation();
+    const item = items.find(i => i.id === itemId);
+    if (!item) return;
+
     setItems(prevItems =>
-      prevItems.map(item =>
-        item.id === itemId ? { ...item, starred: !item.starred } : item
+      prevItems.map(i =>
+        i.id === itemId ? { ...i, starred: !i.starred } : i
       )
     );
+
+    try {
+      const token = localStorage.getItem('token');
+      const route = item.type === 'folder' ? 'folders' : 'files';
+      const response = await fetch(`http://localhost:8080/api/${route}/${itemId}/star`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to toggle star');
+      }
+      await fetchDashboardData(false);
+    } catch (error) {
+      showNotification("error", error.message);
+      setItems(prevItems =>
+        prevItems.map(i =>
+          i.id === itemId ? { ...i, starred: !i.starred } : i
+        )
+      );
+    }
   };
 
   // Trash actions
-  const handleRestoreItem = (itemId, e) => {
+  const handleRestoreItem = async (itemId, e) => {
     e.stopPropagation();
-    setItems(prev => prev.map(item => item.id === itemId ? { ...item, inTrash: false } : item));
+    const item = items.find(i => i.id === itemId);
+    if (!item) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const route = item.type === 'folder' ? 'folders' : 'files';
+      const response = await fetch(`http://localhost:8080/api/${route}/${itemId}/restore`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to restore item');
+      }
+      showNotification("success", `${item.type === 'folder' ? 'Folder' : 'File'} restored successfully.`);
+      await fetchDashboardData();
+    } catch (error) {
+      showNotification("error", error.message);
+    }
   };
 
-  const handleDeletePermanent = (itemId, e) => {
+  const handleDeletePermanent = async (itemId, e) => {
     e.stopPropagation();
-    if (confirm("Are you sure you want to permanently delete this item? This action cannot be undone.")) {
-      setItems(prev => prev.filter(item => item.id !== itemId));
+    const item = items.find(i => i.id === itemId);
+    if (!item) return;
+
+    if (!confirm(`Are you sure you want to permanently delete this ${item.type === 'folder' ? 'folder' : 'file'}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const route = item.type === 'folder' ? 'folders' : 'files';
+      const response = await fetch(`http://localhost:8080/api/${route}/${itemId}/permanent`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to permanently delete item');
+      }
+      showNotification("success", `${item.type === 'folder' ? 'Folder' : 'File'} permanently deleted.`);
+      await fetchDashboardData();
+    } catch (error) {
+      showNotification("error", error.message);
     }
   };
 
@@ -571,12 +852,7 @@ export default function Dashboard({ onNavigate, user }) {
   const folderItems = filteredItems.filter(item => item.type === 'folder');
   const fileItems = filteredItems.filter(item => item.type === 'file');
 
-  const suggestedFoldersList = [
-    { name: 'Work Projects', id: 'f-1', itemsCount: '12 items' },
-    { name: 'Personal Documents', id: 'f-2', itemsCount: '8 items' },
-    { name: 'College Files', id: 'f-6', itemsCount: '15 items' },
-    { name: 'Design Assets', id: 'f-4', itemsCount: '10 items' },
-  ];
+
 
   // People dropdown lists search filter
   const peopleOptions = [
@@ -584,17 +860,17 @@ export default function Dashboard({ onNavigate, user }) {
     { id: 'Sarah Jenkins', name: 'Sarah Jenkins', email: 'sarah.j@nexora.io', initials: 'SJ' },
     { id: 'Michael Chen', name: 'Michael Chen', email: 'michael.c@nexora.io', initials: 'MC' },
   ];
-  const filteredPeople = peopleOptions.filter(p => 
-    p.name.toLowerCase().includes(peopleSearch.toLowerCase()) || 
+  const filteredPeople = peopleOptions.filter(p =>
+    p.name.toLowerCase().includes(peopleSearch.toLowerCase()) ||
     p.email.toLowerCase().includes(peopleSearch.toLowerCase())
   );
 
   return (
     <div className="flex w-full h-screen overflow-hidden font-sans text-sm text-slate-100 bg-[#070b13] select-none antialiased" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
-      
+
       {/* MOBILE SIDEBAR OVERLAY */}
       {isSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[99] md:hidden transition-opacity duration-200"
           onClick={() => setIsSidebarOpen(false)}
         />
@@ -603,10 +879,9 @@ export default function Dashboard({ onNavigate, user }) {
       {/* ==========================================
           LEFT SIDEBAR (Google Drive Layout)
           ========================================== */}
-      <aside 
-        className={`fixed top-0 bottom-0 left-0 w-64 bg-slate-900/60 border-r border-slate-800/40 py-4 px-3 flex flex-col justify-between z-[100] md:sticky md:flex transform transition-transform duration-200 ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-        }`}
+      <aside
+        className={`fixed top-0 bottom-0 left-0 w-64 bg-slate-900/60 border-r border-slate-800/40 py-4 px-3 flex flex-col justify-between z-[100] md:sticky md:flex transform transition-transform duration-200 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+          }`}
       >
         <div className="flex flex-col gap-4">
           {/* Logo & Nexora Branding */}
@@ -620,8 +895,8 @@ export default function Dashboard({ onNavigate, user }) {
               </span>
             </div>
             {/* Mobile close button */}
-            <button 
-              onClick={() => setIsSidebarOpen(false)} 
+            <button
+              onClick={() => setIsSidebarOpen(false)}
               className="p-1 rounded-md border border-slate-800 bg-slate-950/40 text-slate-400 hover:text-white md:hidden"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -638,7 +913,7 @@ export default function Dashboard({ onNavigate, user }) {
             >
               {/* Colorful Custom Plus Icon */}
               <svg className="w-6 h-6" viewBox="0 0 36 36">
-                <path fill="#818cf8" d="M16 16v14h4V20h14v-4H20V2h-4v14H2v4h14z"/>
+                <path fill="#818cf8" d="M16 16v14h4V20h14v-4H20V2h-4v14H2v4h14z" />
               </svg>
               <span className="text-sm font-semibold tracking-wide">New</span>
             </button>
@@ -648,9 +923,34 @@ export default function Dashboard({ onNavigate, user }) {
                 <div className="fixed inset-0 z-40" onClick={() => setIsNewMenuOpen(false)} />
                 <div className="absolute left-2 top-16 w-56 rounded-xl bg-slate-900 border border-slate-800 p-1.5 shadow-lg z-50 animate-in fade-in slide-in-from-top-2 duration-150 text-xs">
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       setIsNewMenuOpen(false);
-                      alert("Folder creation is scheduled for Day 10+ backend development.");
+                      const folderName = prompt("Enter folder name:");
+                      if (!folderName) return;
+
+                      try {
+                        const token = localStorage.getItem("token");
+                        const response = await fetch("http://localhost:8080/api/folders", {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${token}`,
+                          },
+                          body: JSON.stringify({
+                            name: folderName,
+                            parent_folder_id: currentFolderId,
+                          }),
+                        });
+
+                        const data = await response.json();
+                        if (!response.ok) {
+                          throw new Error(data.message || "Failed to create folder");
+                        }
+
+                        await fetchDashboardData();
+                      } catch (error) {
+                        alert(error.message);
+                      }
                     }}
                     className="w-full text-left px-3 py-2 font-medium text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition flex items-center gap-2.5"
                   >
@@ -660,7 +960,7 @@ export default function Dashboard({ onNavigate, user }) {
                   <button
                     onClick={() => {
                       setIsNewMenuOpen(false);
-                      alert("File upload functionality is scheduled for Day 10+ backend development.");
+                      document.getElementById("fileUploadInput").click();
                     }}
                     className="w-full text-left px-3 py-2 font-medium text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition flex items-center gap-2.5"
                   >
@@ -672,7 +972,7 @@ export default function Dashboard({ onNavigate, user }) {
                   <button
                     onClick={() => {
                       setIsNewMenuOpen(false);
-                      alert("Folder upload functionality is scheduled for Day 10+ backend development.");
+                      document.getElementById("folderUploadInput").click();
                     }}
                     className="w-full text-left px-3 py-2 font-medium text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition flex items-center gap-2.5"
                   >
@@ -684,6 +984,39 @@ export default function Dashboard({ onNavigate, user }) {
                 </div>
               </>
             )}
+
+            <input
+              id="fileUploadInput"
+              type="file"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                try {
+                  await handleUploadFile(file);
+                } finally {
+                  e.target.value = "";
+                }
+              }}
+            />
+
+            <input
+              id="folderUploadInput"
+              type="file"
+              webkitdirectory=""
+              directory=""
+              multiple
+              className="hidden"
+              onChange={async (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length === 0) return;
+                try {
+                  await handleUploadFolder(files);
+                } finally {
+                  e.target.value = "";
+                }
+              }}
+            />
           </div>
 
           {/* Navigation Items */}
@@ -705,11 +1038,10 @@ export default function Dashboard({ onNavigate, user }) {
                 <button
                   key={item.id}
                   onClick={() => handleTabSwitch(item.id)}
-                  className={`flex items-center gap-3 px-4 py-2 rounded-full text-xs font-medium transition duration-150 text-left ${
-                    isActive
+                  className={`flex items-center gap-3 px-4 py-2 rounded-full text-xs font-medium transition duration-150 text-left ${isActive
                       ? 'bg-slate-800/80 text-white font-semibold border-l-2 border-indigo-500'
                       : 'text-slate-400 hover:bg-slate-800/30 hover:text-slate-200'
-                  }`}
+                    }`}
                 >
                   <span className={`${isActive ? 'text-indigo-400' : 'text-slate-500'}`}>
                     {item.id === 'starred' && isActive ? <StarIconSolid /> : item.icon}
@@ -728,7 +1060,7 @@ export default function Dashboard({ onNavigate, user }) {
               <CloudIcon />
               <span className="text-[11px] font-semibold text-slate-300">Storage</span>
             </div>
-            
+
             <div className="w-full bg-slate-800 rounded-full h-1 overflow-hidden">
               <div className="bg-indigo-500 h-full rounded-full" style={{ width: '8%' }}></div>
             </div>
@@ -751,13 +1083,13 @@ export default function Dashboard({ onNavigate, user }) {
           MAIN AREA (Header + Floated Workspace)
           ========================================== */}
       <main className="flex-1 flex flex-col h-screen min-w-0">
-        
+
         {/* TOP HEADER */}
         <header className="h-16 px-6 flex items-center justify-between gap-4 shrink-0 bg-[#070b13]/40 border-b border-slate-900/40">
           {/* Hamburger Menu & Search */}
           <div className="flex items-center gap-3 flex-1 max-w-2xl">
-            <button 
-              onClick={() => setIsSidebarOpen(true)} 
+            <button
+              onClick={() => setIsSidebarOpen(true)}
               className="p-2 rounded-full hover:bg-slate-900 text-slate-400 md:hidden transition"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -809,7 +1141,7 @@ export default function Dashboard({ onNavigate, user }) {
                 <div className="w-8 h-8 rounded-full bg-indigo-600/30 border border-indigo-500/30 text-white font-bold text-xs flex items-center justify-center">
                   {initials}
                 </div>
-                <span className="hidden sm:inline text-xs font-medium text-slate-300 pr-0.5">{displayUser.name}</span>
+                <span className="hidden sm:inline text-xs font-medium text-slate-300 pr-0.5">{displayName}</span>
                 <svg className="w-3.5 h-3.5 text-slate-500 hidden sm:inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
@@ -825,7 +1157,7 @@ export default function Dashboard({ onNavigate, user }) {
                         {initials}
                       </div>
                       <div className="flex flex-col min-w-0">
-                        <span className="text-sm font-semibold text-white truncate">{displayUser.name}</span>
+                        <span className="text-sm font-semibold text-white truncate">{displayName}</span>
                         <span className="text-xs text-slate-400 truncate">{displayUser.email}</span>
                       </div>
                     </div>
@@ -860,10 +1192,19 @@ export default function Dashboard({ onNavigate, user }) {
 
         {/* WORKSPACE CONTENT BODY */}
         <div className="flex-1 flex overflow-hidden">
-          
+
           {/* Main Workspace Card */}
-          <div className="flex-1 bg-slate-900/30 border border-slate-800/60 m-2 mr-1 flex flex-col overflow-hidden shadow-xs rounded-2xl">
-            
+          <div className="flex-1 bg-slate-900/30 border border-slate-800/60 m-2 mr-1 flex flex-col overflow-hidden shadow-xs rounded-2xl relative">
+            {isDragging && (
+              <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/85 border-2 border-dashed border-indigo-500 rounded-2xl m-0.5 backdrop-blur-xs pointer-events-none animate-in fade-in duration-150">
+                <svg className="w-12 h-12 text-indigo-400 animate-bounce mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <span className="text-sm font-semibold text-white">Drop your file here</span>
+                <span className="text-xs text-slate-400 mt-1">Upload directly to this folder</span>
+              </div>
+            )}
+
             {/* Title / Action Bar */}
             <div className="px-6 py-4.5 border-b border-slate-800/60 flex items-center justify-between shrink-0">
               <div className="flex flex-col gap-1 min-w-0">
@@ -878,9 +1219,8 @@ export default function Dashboard({ onNavigate, user }) {
                         )}
                         <button
                           onClick={() => handleFolderClick(crumb.id)}
-                          className={`text-lg font-semibold hover:text-indigo-400 hover:underline transition ${
-                            index === breadcrumbs.length - 1 ? 'text-white' : 'text-slate-400'
-                          }`}
+                          className={`text-lg font-semibold hover:text-indigo-400 hover:underline transition ${index === breadcrumbs.length - 1 ? 'text-white' : 'text-slate-400'
+                            }`}
                         >
                           {crumb.name}
                         </button>
@@ -900,22 +1240,20 @@ export default function Dashboard({ onNavigate, user }) {
                   <div className="flex items-center border border-slate-800 rounded-lg p-0.5 bg-slate-950/30">
                     <button
                       onClick={() => setViewMode('list')}
-                      className={`p-1.5 rounded-md transition duration-150 ${
-                        viewMode === 'list'
+                      className={`p-1.5 rounded-md transition duration-150 ${viewMode === 'list'
                           ? 'bg-slate-800 text-indigo-400'
                           : 'text-slate-500 hover:text-slate-300'
-                      }`}
+                        }`}
                       title="List view"
                     >
                       <ListIcon />
                     </button>
                     <button
                       onClick={() => setViewMode('grid')}
-                      className={`p-1.5 rounded-md transition duration-150 ${
-                        viewMode === 'grid'
+                      className={`p-1.5 rounded-md transition duration-150 ${viewMode === 'grid'
                           ? 'bg-slate-800 text-indigo-400'
                           : 'text-slate-500 hover:text-slate-300'
-                      }`}
+                        }`}
                       title="Grid view"
                     >
                       <GridIcon />
@@ -937,16 +1275,15 @@ export default function Dashboard({ onNavigate, user }) {
             {/* Filter controls row (Render on: My Drive, Shared with me, Recent, Starred, Trash) */}
             {['drive', 'shared', 'recent', 'starred', 'trash'].includes(activeTab) && (
               <div className="px-6 py-2.5 bg-slate-900/10 border-b border-slate-800/40 flex flex-wrap items-center gap-2.5 z-20 shrink-0">
-                
+
                 {/* 1. Type Dropdown */}
                 <div className="relative">
                   <button
                     onClick={() => setActiveFilterDropdown(activeFilterDropdown === 'type' ? null : 'type')}
-                    className={`px-3 py-1 border text-xs rounded-lg flex items-center gap-1.5 transition ${
-                      filterType !== 'all'
+                    className={`px-3 py-1 border text-xs rounded-lg flex items-center gap-1.5 transition ${filterType !== 'all'
                         ? 'border-indigo-800 bg-indigo-950/50 text-indigo-300 font-semibold'
                         : 'border-slate-800 bg-slate-900/35 text-slate-300 hover:bg-slate-850 hover:text-white'
-                    }`}
+                      }`}
                   >
                     <span>Type{filterType !== 'all' ? `: ${filterType.toUpperCase()}` : ''}</span>
                     <svg className="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -990,11 +1327,10 @@ export default function Dashboard({ onNavigate, user }) {
                 <div className="relative">
                   <button
                     onClick={() => setActiveFilterDropdown(activeFilterDropdown === 'people' ? null : 'people')}
-                    className={`px-3 py-1 border text-xs rounded-lg flex items-center gap-1.5 transition ${
-                      filterOwner !== 'all'
+                    className={`px-3 py-1 border text-xs rounded-lg flex items-center gap-1.5 transition ${filterOwner !== 'all'
                         ? 'border-indigo-800 bg-indigo-950/50 text-indigo-300 font-semibold'
                         : 'border-slate-800 bg-slate-900/35 text-slate-300 hover:bg-slate-850 hover:text-white'
-                    }`}
+                      }`}
                   >
                     <span>People{filterOwner !== 'all' ? `: ${filterOwner === 'link' ? 'Shared link' : filterOwner.split(' ')[0]}` : ''}</span>
                     <svg className="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -1005,7 +1341,7 @@ export default function Dashboard({ onNavigate, user }) {
                     <>
                       <div className="fixed inset-0 z-30" onClick={() => setActiveFilterDropdown(null)} />
                       <div className="absolute left-0 mt-1.5 w-60 rounded-xl bg-slate-900 border border-slate-800 shadow-xl z-40 text-xs flex flex-col">
-                        
+
                         {/* Search field */}
                         <div className="p-2 border-b border-slate-800">
                           <input
@@ -1043,7 +1379,7 @@ export default function Dashboard({ onNavigate, user }) {
                               </button>
                             ))
                           )}
-                          
+
                           {/* "Anyone with the link" option */}
                           <button
                             onClick={() => {
@@ -1071,11 +1407,10 @@ export default function Dashboard({ onNavigate, user }) {
                 <div className="relative">
                   <button
                     onClick={() => setActiveFilterDropdown(activeFilterDropdown === 'modified' ? null : 'modified')}
-                    className={`px-3 py-1 border text-xs rounded-lg flex items-center gap-1.5 transition ${
-                      filterModified !== 'all'
+                    className={`px-3 py-1 border text-xs rounded-lg flex items-center gap-1.5 transition ${filterModified !== 'all'
                         ? 'border-indigo-800 bg-indigo-950/50 text-indigo-300 font-semibold'
                         : 'border-slate-800 bg-slate-900/35 text-slate-300 hover:bg-slate-850 hover:text-white'
-                    }`}
+                      }`}
                   >
                     <span>Modified{filterModified !== 'all' ? ': Active' : ''}</span>
                     <svg className="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -1085,7 +1420,7 @@ export default function Dashboard({ onNavigate, user }) {
                   {activeFilterDropdown === 'modified' && (
                     <>
                       <div className="fixed inset-0 z-30" onClick={() => setActiveFilterDropdown(null)} />
-                      <div 
+                      <div
                         className="absolute left-0 mt-1.5 w-60 rounded-xl bg-slate-900 border border-slate-800 p-2 shadow-xl z-40 text-xs flex flex-col gap-1.5 animate-in fade-in duration-100"
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -1145,7 +1480,7 @@ export default function Dashboard({ onNavigate, user }) {
                           >
                             Cancel
                           </button>
-                          
+
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => {
@@ -1179,11 +1514,10 @@ export default function Dashboard({ onNavigate, user }) {
                 <div className="relative">
                   <button
                     onClick={() => setActiveFilterDropdown(activeFilterDropdown === 'source' ? null : 'source')}
-                    className={`px-3 py-1 border text-xs rounded-lg flex items-center gap-1.5 transition ${
-                      filterSource !== 'all'
+                    className={`px-3 py-1 border text-xs rounded-lg flex items-center gap-1.5 transition ${filterSource !== 'all'
                         ? 'border-indigo-800 bg-indigo-950/50 text-indigo-300 font-semibold'
                         : 'border-slate-800 bg-slate-900/35 text-slate-300 hover:bg-slate-850 hover:text-white'
-                    }`}
+                      }`}
                   >
                     <span>Source{filterSource !== 'all' ? `: ${filterSource.toUpperCase()}` : ''}</span>
                     <svg className="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -1229,7 +1563,7 @@ export default function Dashboard({ onNavigate, user }) {
 
             {/* SCROLLABLE WORKSPACE WINDOW */}
             <div className="flex-1 overflow-y-auto p-6 bg-slate-950/20">
-              
+
               {isLoading ? (
                 /* LOADING SHIMMER */
                 <div className="space-y-6 animate-pulse">
@@ -1271,7 +1605,7 @@ export default function Dashboard({ onNavigate, user }) {
               ) : (
                 /* ACTUAL PAGE RENDERERS */
                 <div className="space-y-6">
-                  
+
                   {/* ==========================================
                       RENDER: PROJECTS ('projects')
                       ========================================== */}
@@ -1285,8 +1619,8 @@ export default function Dashboard({ onNavigate, user }) {
                           className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                            <line x1="12" x2="12" y1="5" y2="19"/>
-                            <line x1="5" x2="19" y1="12" y2="12"/>
+                            <line x1="12" x2="12" y1="5" y2="19" />
+                            <line x1="5" x2="19" y1="12" y2="12" />
                           </svg>
                           <span>Create a project</span>
                         </button>
@@ -1299,12 +1633,12 @@ export default function Dashboard({ onNavigate, user }) {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                           </svg>
                         </div>
-                        
+
                         <h3 className="text-sm font-bold text-white mb-1.5">Group files for better answers</h3>
                         <p className="text-slate-400 text-xs max-w-xs mb-5 leading-relaxed">
                           Create projects to organize related documents and chat with them in a dedicated context.
                         </p>
-                        
+
                         <button
                           onClick={() => alert("Project creation is scheduled for later development days.")}
                           className="py-2 px-5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs font-semibold rounded-lg shadow-sm hover:shadow transition"
@@ -1320,18 +1654,18 @@ export default function Dashboard({ onNavigate, user }) {
                       ========================================== */}
                   {activeTab === 'drive' && (
                     <>
-                      {/* Suggested Folders section (Only visible on My Drive root) */}
-                      {currentFolderId === null && (
+                      {/* Folders Section */}
+                      {folderItems.length > 0 && (
                         <div className="space-y-3">
                           <div className="flex items-center gap-1 text-slate-400">
                             <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                             </svg>
-                            <span className="text-xs font-bold tracking-wide text-slate-400">Suggested folders</span>
+                            <span className="text-xs font-bold tracking-wide text-slate-400">Folders</span>
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            {suggestedFoldersList.map(folder => (
+                            {folderItems.map(folder => (
                               <div
                                 key={folder.id}
                                 onClick={() => handleFolderClick(folder.id)}
@@ -1346,46 +1680,42 @@ export default function Dashboard({ onNavigate, user }) {
                                       {folder.name}
                                     </span>
                                     <span className="text-[10px] text-slate-500 mt-0.5">
-                                      {folder.itemsCount}
+                                      Folder
                                     </span>
                                   </div>
                                 </div>
-                                <button className="p-1 rounded hover:bg-slate-800/50 text-slate-500 group-hover:text-slate-300 shrink-0" onClick={(e) => { e.stopPropagation(); alert("Actions menu is scheduled for Day 10+."); }}>
-                                  <ThreeDotsIcon />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Normal Subfolders Section (Inside folder view) */}
-                      {currentFolderId !== null && folderItems.length > 0 && (
-                        <div className="space-y-3">
-                          <div className="text-xs font-bold text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-800/80">
-                            Folders
-                          </div>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
-                            {folderItems.map(folder => (
-                              <div
-                                key={folder.id}
-                                onClick={() => handleFolderClick(folder.id)}
-                                className="group bg-slate-900/20 hover:bg-slate-800/40 border border-slate-800/80 hover:border-slate-700/60 rounded-lg p-2.5 flex items-center justify-between transition cursor-pointer select-none shadow-xs"
-                              >
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  <span className="text-indigo-400 group-hover:text-indigo-300 shrink-0">
-                                    <FolderIcon className="w-4 h-4" />
-                                  </span>
-                                  <span className="text-xs font-semibold text-slate-350 truncate" title={folder.name}>
-                                    {folder.name}
-                                  </span>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={(e) => handleToggleStar(folder.id, e)}
+                                    className="p-1.5 rounded hover:bg-slate-800/50 text-slate-650 hover:text-amber-400 transition"
+                                  >
+                                    {folder.starred ? <StarIconSolid /> : <StarIconOutline />}
+                                  </button>
+                                  <button
+                                    className="p-1.5 rounded hover:bg-slate-800/50 text-slate-500 hover:text-white transition"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleRenameFolderPrompt(folder.id, folder.name);
+                                    }}
+                                    title="Rename folder"
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    className="p-1.5 rounded hover:bg-slate-800/50 text-slate-500 hover:text-red-400 transition shrink-0"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteFolder(folder.id);
+                                    }}
+                                    title="Move to trash"
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
                                 </div>
-                                <button
-                                  onClick={(e) => handleToggleStar(folder.id, e)}
-                                  className="text-slate-600 hover:text-amber-400 p-0.5 rounded opacity-0 group-hover:opacity-100 transition shrink-0"
-                                >
-                                  {folder.starred ? <StarIconSolid /> : <StarIconOutline />}
-                                </button>
                               </div>
                             ))}
                           </div>
@@ -1421,7 +1751,11 @@ export default function Dashboard({ onNavigate, user }) {
                                       <td className="py-2.5 px-4 font-medium">
                                         <div className="flex items-center gap-2.5 min-w-0">
                                           <span className="shrink-0">{getFileIcon(file.extension)}</span>
-                                          <span className="truncate max-w-[160px] sm:max-w-xs" title={file.name}>
+                                          <span 
+                                            className="truncate max-w-[160px] sm:max-w-xs hover:text-indigo-400 cursor-pointer transition" 
+                                            title={file.name}
+                                            onClick={() => handlePreviewFile(file)}
+                                          >
                                             {file.name}
                                           </span>
                                         </div>
@@ -1432,7 +1766,7 @@ export default function Dashboard({ onNavigate, user }) {
                                       <td className="py-2.5 px-4 hidden md:table-cell">
                                         <div className="flex items-center gap-2">
                                           <div className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 text-[8px] uppercase">
-                                            {file.owner === 'me' ? 'me' : file.owner.split(' ').map(n=>n[0]).join('')}
+                                            {file.owner === 'me' ? 'me' : file.owner.split(' ').map(n => n[0]).join('')}
                                           </div>
                                           <span className="text-slate-400">{file.owner === 'me' ? 'me' : file.owner}</span>
                                         </div>
@@ -1447,9 +1781,33 @@ export default function Dashboard({ onNavigate, user }) {
                                         <div className="flex items-center justify-end gap-1.5">
                                           <button
                                             onClick={(e) => handleToggleStar(file.id, e)}
-                                            className="text-slate-600 hover:text-amber-400 p-1 rounded hover:bg-slate-800/50 transition opacity-0 group-hover:opacity-100"
+                                            className="text-slate-600 hover:text-amber-400 p-1 rounded hover:bg-slate-800/50 transition"
                                           >
                                             {file.starred ? <StarIconSolid /> : <StarIconOutline />}
+                                          </button>
+                                          <button
+                                            className="p-1 rounded hover:bg-slate-800/50 text-slate-400 hover:text-white transition"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleRenameFilePrompt(file.id, file.name);
+                                            }}
+                                            title="Rename file"
+                                          >
+                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                            </svg>
+                                          </button>
+                                          <button
+                                            className="p-1 rounded hover:bg-slate-800/50 text-slate-400 hover:text-red-400 transition"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDeleteFile(file.id);
+                                            }}
+                                            title="Move to trash"
+                                          >
+                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
                                           </button>
                                         </div>
                                       </td>
@@ -1464,16 +1822,43 @@ export default function Dashboard({ onNavigate, user }) {
                               {fileItems.map(file => (
                                 <div
                                   key={file.id}
+                                  onClick={() => handlePreviewFile(file)}
                                   className="group bg-slate-900/20 hover:bg-slate-800/40 border border-slate-800/80 hover:border-slate-700/60 rounded-xl p-3 flex flex-col justify-between h-24 transition cursor-pointer select-none shadow-xs"
                                 >
                                   <div className="flex items-start justify-between">
                                     <span className="shrink-0">{getFileIcon(file.extension)}</span>
-                                    <button
-                                      onClick={(e) => handleToggleStar(file.id, e)}
-                                      className="text-slate-600 hover:text-amber-400 p-0.5 rounded opacity-0 group-hover:opacity-100 transition shrink-0"
-                                    >
-                                      {file.starred ? <StarIconSolid /> : <StarIconOutline />}
-                                    </button>
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        onClick={(e) => handleToggleStar(file.id, e)}
+                                        className="text-slate-600 hover:text-amber-400 p-0.5 rounded transition shrink-0"
+                                      >
+                                        {file.starred ? <StarIconSolid /> : <StarIconOutline />}
+                                      </button>
+                                      <button
+                                        className="p-0.5 rounded hover:bg-slate-800/50 text-slate-400 hover:text-white transition shrink-0"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleRenameFilePrompt(file.id, file.name);
+                                        }}
+                                        title="Rename file"
+                                      >
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                        </svg>
+                                      </button>
+                                      <button
+                                        className="p-0.5 rounded hover:bg-slate-800/50 text-slate-400 hover:text-red-400 transition shrink-0"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteFile(file.id);
+                                        }}
+                                        title="Move to trash"
+                                      >
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                      </button>
+                                    </div>
                                   </div>
 
                                   <div className="mt-2 min-w-0">
@@ -1519,6 +1904,7 @@ export default function Dashboard({ onNavigate, user }) {
                           {items.filter(item => !item.inTrash && item.type === 'file').slice(0, 3).map(file => (
                             <div
                               key={file.id}
+                              onClick={() => handlePreviewFile(file)}
                               className="group bg-slate-900/20 hover:bg-slate-800/40 border border-slate-800/80 rounded-xl p-4 flex flex-col justify-between h-28 transition cursor-pointer shadow-xs"
                             >
                               <div className="flex items-start justify-between">
@@ -1550,7 +1936,11 @@ export default function Dashboard({ onNavigate, user }) {
                         <div className="border border-slate-800/60 rounded-xl overflow-hidden shadow-xs bg-slate-900/10">
                           <div className="divide-y divide-slate-850/60">
                             {items.filter(item => !item.inTrash).slice(0, 5).map(item => (
-                              <div key={item.id} className="p-3 flex items-center justify-between gap-4 text-xs hover:bg-slate-800/35 transition">
+                              <div 
+                                key={item.id} 
+                                onClick={() => item.type === 'file' && handlePreviewFile(item)}
+                                className={`p-3 flex items-center justify-between gap-4 text-xs hover:bg-slate-800/35 transition ${item.type === 'file' ? 'cursor-pointer hover:text-indigo-400' : ''}`}
+                              >
                                 <div className="flex items-center gap-3 min-w-0">
                                   <span>{item.type === 'folder' ? <FolderIcon className="w-4 h-4 text-indigo-400" /> : getFileIcon(item.extension)}</span>
                                   <span className="font-medium text-slate-350 truncate">{item.name}</span>
@@ -1574,9 +1964,9 @@ export default function Dashboard({ onNavigate, user }) {
                     <div className="flex flex-col items-center justify-center py-20 text-center">
                       <div className="w-20 h-20 rounded-full bg-slate-900/60 border border-slate-800/60 flex items-center justify-center text-slate-500 mb-6 shadow-xs">
                         <svg className="w-10 h-10 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                          <rect width="18" height="12" x="3" y="4" rx="2"/>
-                          <line x1="12" x2="12" y1="16" y2="20"/>
-                          <line x1="8" x2="16" y1="20" y2="20"/>
+                          <rect width="18" height="12" x="3" y="4" rx="2" />
+                          <line x1="12" x2="12" y1="16" y2="20" />
+                          <line x1="8" x2="16" y1="20" y2="20" />
                         </svg>
                       </div>
                       <h3 className="text-base font-bold text-white">No computers syncing</h3>
@@ -1613,13 +2003,19 @@ export default function Dashboard({ onNavigate, user }) {
                                 <td className="py-3 px-4 font-medium">
                                   <div className="flex items-center gap-2.5 min-w-0">
                                     <span className="shrink-0">{getFileIcon(file.extension)}</span>
-                                    <span className="truncate" title={file.name}>{file.name}</span>
+                                    <span 
+                                      className="truncate cursor-pointer hover:text-indigo-400 transition" 
+                                      title={file.name}
+                                      onClick={() => handlePreviewFile(file)}
+                                    >
+                                      {file.name}
+                                    </span>
                                   </div>
                                 </td>
                                 <td className="py-3 px-4">
                                   <div className="flex items-center gap-2">
                                     <div className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 text-[8px] uppercase">
-                                      {file.owner === 'me' ? 'me' : file.owner.split(' ').map(n=>n[0]).join('')}
+                                      {file.owner === 'me' ? 'me' : file.owner.split(' ').map(n => n[0]).join('')}
                                     </div>
                                     <span>{file.owner === 'me' ? 'me' : file.owner}</span>
                                   </div>
@@ -1655,7 +2051,13 @@ export default function Dashboard({ onNavigate, user }) {
                                 <td className="py-3 px-4 font-medium">
                                   <div className="flex items-center gap-2.5 min-w-0">
                                     <span className="shrink-0">{getFileIcon(file.extension)}</span>
-                                    <span className="truncate" title={file.name}>{file.name}</span>
+                                    <span 
+                                      className="truncate cursor-pointer hover:text-indigo-400 transition" 
+                                      title={file.name}
+                                      onClick={() => handlePreviewFile(file)}
+                                    >
+                                      {file.name}
+                                    </span>
                                   </div>
                                 </td>
                                 <td className="py-3 px-4 text-slate-500">{file.reasonSuggested}</td>
@@ -1723,7 +2125,13 @@ export default function Dashboard({ onNavigate, user }) {
                                     <td className="py-2.5 px-4 font-medium">
                                       <div className="flex items-center gap-2.5 min-w-0">
                                         <span className="shrink-0">{getFileIcon(file.extension)}</span>
-                                        <span className="truncate" title={file.name}>{file.name}</span>
+                                        <span 
+                                          className="truncate cursor-pointer hover:text-indigo-400 transition" 
+                                          title={file.name}
+                                          onClick={() => handlePreviewFile(file)}
+                                        >
+                                          {file.name}
+                                        </span>
                                       </div>
                                     </td>
                                     <td className="py-2.5 px-4 text-slate-500">{file.owner}</td>
@@ -1840,13 +2248,13 @@ export default function Dashboard({ onNavigate, user }) {
                       ========================================== */}
                   {activeTab === 'storage' && (
                     <div className="space-y-6">
-                      
+
                       {/* Storage utilization card */}
                       <div className="bg-slate-900/20 border border-slate-850 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div className="space-y-2.5 flex-1">
                           <h3 className="text-sm font-semibold text-slate-200">Nexora Cloud Storage Usage</h3>
                           <div className="text-3xl font-extrabold text-indigo-400">1.2 GB <span className="text-sm font-semibold text-slate-500">of 15 GB used (8%)</span></div>
-                          
+
                           {/* Segmented storage progress bar */}
                           <div className="w-full bg-slate-950 border border-slate-850 rounded-full h-3 overflow-hidden flex">
                             <div className="bg-indigo-500 h-full" style={{ width: '4%' }} title="PDFs: 4.5 MB" />
@@ -1891,7 +2299,7 @@ export default function Dashboard({ onNavigate, user }) {
                             </thead>
                             <tbody className="divide-y divide-slate-850/60">
                               {items.filter(item => !item.inTrash && item.type === 'file')
-                                .sort((a,b) => {
+                                .sort((a, b) => {
                                   const parseSize = (sizeStr) => {
                                     const val = parseFloat(sizeStr);
                                     if (sizeStr.includes('MB')) return val * 1024;
@@ -1905,7 +2313,13 @@ export default function Dashboard({ onNavigate, user }) {
                                     <td className="py-3 px-4 font-medium">
                                       <div className="flex items-center gap-2.5 min-w-0">
                                         <span className="shrink-0">{getFileIcon(file.extension)}</span>
-                                        <span className="truncate" title={file.name}>{file.name}</span>
+                                        <span 
+                                          className="truncate cursor-pointer hover:text-indigo-400 transition" 
+                                          title={file.name}
+                                          onClick={() => handlePreviewFile(file)}
+                                        >
+                                          {file.name}
+                                        </span>
                                       </div>
                                     </td>
                                     <td className="py-3 px-4 text-slate-500">{file.location || 'My Drive'}</td>
@@ -1953,6 +2367,41 @@ export default function Dashboard({ onNavigate, user }) {
 
         </div>
       </main>
+      {notification && (
+        <div className={`fixed bottom-6 right-6 z-[9999] px-4 py-3 rounded-xl border shadow-xl flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-200 ${notification.type === 'success'
+            ? 'bg-slate-900 border-emerald-500/30 text-emerald-400'
+            : 'bg-slate-900 border-rose-500/30 text-rose-400'
+          }`}>
+          {notification.type === 'success' ? (
+            <svg className="w-5 h-5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ) : (
+            <svg className="w-5 h-5 text-rose-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          )}
+          <div className="flex flex-col text-xs">
+            <span className="font-semibold">{notification.type === 'success' ? 'Success' : 'Error'}</span>
+            <span className="text-slate-300 mt-0.5">{notification.message}</span>
+          </div>
+          <button onClick={() => setNotification(null)} className="ml-2 text-slate-500 hover:text-slate-350">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* FILE PREVIEW MODAL */}
+      <FilePreviewModal
+        selectedPreviewFile={selectedPreviewFile}
+        previewLoading={previewLoading}
+        previewUrl={previewUrl}
+        previewTextContent={previewTextContent}
+        onClose={() => setSelectedPreviewFile(null)}
+        getFileIcon={getFileIcon}
+      />
     </div>
   );
 }

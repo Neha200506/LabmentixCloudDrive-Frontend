@@ -4,54 +4,111 @@ import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('dashboard'); // Default to dashboard for Day 9 testing
+  const [currentPage, setCurrentPage] = useState(() => {
+    const token = localStorage.getItem('token');
+    return token ? 'dashboard' : 'login';
+  });
+
   const [registeredUsers, setRegisteredUsers] = useState(() => {
     try {
       const saved = localStorage.getItem('registeredUsers');
-      return saved ? JSON.parse(saved) : [
-        { email: 'alex.rivera@nexora.io', name: 'Alex Rivera' }
-      ];
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return [{ email: 'alex.rivera@nexora.io', name: 'Alex Rivera' }];
+      return [];
     }
   });
 
   const [user, setUser] = useState(() => {
     try {
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        return null;
+      }
+
       const saved = localStorage.getItem('currentUser');
-      return saved ? JSON.parse(saved) : { email: 'alex.rivera@nexora.io', name: 'Alex Rivera' };
+
+      if (saved) {
+        return JSON.parse(saved);
+      }
+
+      return null;
     } catch {
-      return { email: 'alex.rivera@nexora.io', name: 'Alex Rivera' };
+      return null;
     }
   });
 
   const handleNavigate = (page, email, name) => {
     setCurrentPage(page);
+
+    // Logout / navigate to login
     if (page === 'login') {
       setUser(null);
+
+      localStorage.removeItem('token');
       localStorage.removeItem('currentUser');
-    } else if (page === 'dashboard') {
+      localStorage.removeItem('userEmail');
+
+      return;
+    }
+
+    // Navigate to signup
+    if (page === 'signup') {
+      return;
+    }
+
+    // Navigate to dashboard
+    if (page === 'dashboard') {
       if (email) {
-        const existingUser = registeredUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
-        if (existingUser) {
-          setUser(existingUser);
-          localStorage.setItem('currentUser', JSON.stringify(existingUser));
-        } else {
-          // Do not derive display name from email. Use fallback "Nexora User" if no name provided.
-          const displayName = name || "Nexora User";
-          const newUser = { email, name: displayName };
-          
+        const currentUser = {
+          id: user?.id,
+          full_name: name || user?.full_name || '',
+          email,
+        };
+
+        setUser(currentUser);
+
+        localStorage.setItem(
+          'currentUser',
+          JSON.stringify(currentUser)
+        );
+
+        localStorage.setItem('userEmail', email);
+
+        // Keep frontend registered-user data if needed
+        const existingUser = registeredUsers.find(
+          (u) => u.email?.toLowerCase() === email.toLowerCase()
+        );
+
+        if (!existingUser) {
+          const newUser = {
+            email,
+            name: name || '',
+          };
+
           const updatedUsers = [...registeredUsers, newUser];
+
           setRegisteredUsers(updatedUsers);
-          localStorage.setItem('registeredUsers', JSON.stringify(updatedUsers));
-          
-          setUser(newUser);
-          localStorage.setItem('currentUser', JSON.stringify(newUser));
+
+          localStorage.setItem(
+            'registeredUsers',
+            JSON.stringify(updatedUsers)
+          );
         }
-      } else if (!user) {
-        const defaultUser = { email: 'alex.rivera@nexora.io', name: 'Alex Rivera' };
-        setUser(defaultUser);
-        localStorage.setItem('currentUser', JSON.stringify(defaultUser));
+
+        return;
+      }
+
+      // Dashboard navigation without an email:
+      // restore the already logged-in user only.
+      try {
+        const saved = localStorage.getItem('currentUser');
+
+        if (saved) {
+          setUser(JSON.parse(saved));
+        }
+      } catch {
+        setUser(null);
       }
     }
   };
@@ -63,12 +120,18 @@ function App() {
       ) : currentPage === 'signup' ? (
         <Signup onNavigate={handleNavigate} />
       ) : (
-        <Dashboard onNavigate={handleNavigate} user={user} />
+        <Dashboard
+          onNavigate={handleNavigate}
+          user={user}
+        />
       )}
 
       {/* Floating Development view switcher */}
       <div className="fixed bottom-3 right-3 bg-slate-900/80 border border-slate-800 rounded-md p-1 shadow-lg backdrop-blur-sm z-[9999] flex items-center gap-1 text-[9px] font-bold select-none opacity-40 hover:opacity-100 transition-opacity">
-        <span className="text-slate-500 px-1.5 uppercase tracking-wider text-[8px]">Dev</span>
+        <span className="text-slate-500 px-1.5 uppercase tracking-wider text-[8px]">
+          Dev
+        </span>
+
         <button
           onClick={() => handleNavigate('login')}
           className={`px-1.5 py-0.5 rounded transition ${
@@ -79,6 +142,7 @@ function App() {
         >
           Login
         </button>
+
         <button
           onClick={() => handleNavigate('signup')}
           className={`px-1.5 py-0.5 rounded transition ${
@@ -89,6 +153,7 @@ function App() {
         >
           Signup
         </button>
+
         <button
           onClick={() => handleNavigate('dashboard')}
           className={`px-1.5 py-0.5 rounded transition ${
@@ -105,4 +170,3 @@ function App() {
 }
 
 export default App;
-
