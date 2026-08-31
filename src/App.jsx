@@ -2,9 +2,20 @@ import { useState } from 'react';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
+import ResetPassword from './pages/ResetPassword';
 
 function App() {
+  const [resetToken] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('token') || params.get('reset_token') || '';
+  });
+
   const [currentPage, setCurrentPage] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tokenInUrl = params.get('token') || params.get('reset_token');
+    if (tokenInUrl || window.location.pathname === '/reset-password') {
+      return 'reset-password';
+    }
     const token = localStorage.getItem('token');
     return token ? 'dashboard' : 'login';
   });
@@ -119,6 +130,8 @@ function App() {
         <Login onNavigate={handleNavigate} />
       ) : currentPage === 'signup' ? (
         <Signup onNavigate={handleNavigate} />
+      ) : currentPage === 'reset-password' ? (
+        <ResetPassword token={resetToken} onNavigate={handleNavigate} />
       ) : (
         <Dashboard
           onNavigate={handleNavigate}

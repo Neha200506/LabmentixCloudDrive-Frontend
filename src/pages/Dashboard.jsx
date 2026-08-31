@@ -1,33 +1,27 @@
 import { useState, useEffect, useRef } from 'react';
+import mammoth from 'mammoth';
 
 import {
-  LogoIcon,
-  FolderIcon,
-  HomeIcon,
-  ProjectsIcon,
-  DriveIcon,
-  ComputerIcon,
-  PeopleIcon,
-  ClockIcon,
-  StarIconOutline,
-  StarIconSolid,
-  AlertIcon,
-  TrashIcon,
-  CloudIcon,
   GridIcon,
   ListIcon,
-  HelpIcon,
-  SettingsIcon,
   SearchIcon,
-  AppsIcon,
   CalendarIcon,
   KeepIcon,
   TasksIcon,
   ContactsIcon,
   PlusIcon
 } from '../components/Icons';
-import { formatSize, getFileIcon } from '../utils/dashboardUtils';
+import { getFileIcon, formatSize } from '../utils/dashboardUtils';
 import FilePreviewModal from '../components/FilePreviewModal';
+
+import Sidebar from '../components/dashboard/Sidebar';
+import DashboardHeader from '../components/dashboard/DashboardHeader';
+import FileList from '../components/dashboard/FileList';
+import FileGrid from '../components/dashboard/FileGrid';
+import HomeSection from '../components/dashboard/HomeSection';
+import TrashSection from '../components/dashboard/TrashSection';
+import StarredSection from '../components/dashboard/StarredSection';
+import ShareModal from '../components/dashboard/ShareModal';
 
 export default function Dashboard({ onNavigate, user }) {
   const displayUser = user || { email: '', full_name: 'Nexora User' };
@@ -41,10 +35,30 @@ export default function Dashboard({ onNavigate, user }) {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
   const [previewTextContent, setPreviewTextContent] = useState('');
+  const [previewDocxHtml, setPreviewDocxHtml] = useState('');
+  const [previewError, setPreviewError] = useState('');
+  const [selectedShareFile, setSelectedShareFile] = useState(null);
   const [activeTab, setActiveTab] = useState('drive'); // home, projects, drive, computers, shared, recent, starred, spam, trash, storage
   const [currentFolderId, setCurrentFolderId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState('list'); // Default is list
+  const userKey = displayUser.email || displayUser.id || 'default';
+  const [viewMode, setViewModeState] = useState(() => {
+    return localStorage.getItem(`nexora_view_mode_${userKey}`) || 'list';
+  });
+
+  const setViewMode = (mode) => {
+    setViewModeState(mode);
+    localStorage.setItem(`nexora_view_mode_${userKey}`, mode);
+  };
+
+  useEffect(() => {
+    const saved = localStorage.getItem(`nexora_view_mode_${userKey}`);
+    if (saved) {
+      const timer = setTimeout(() => setViewModeState(saved), 0);
+      return () => clearTimeout(timer);
+    }
+  }, [userKey]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -61,8 +75,6 @@ export default function Dashboard({ onNavigate, user }) {
   const showNotification = (type, message) => {
     setNotification({ type, message });
   };
-
-
 
   const handleUploadFile = async (file) => {
     if (!file) return;
@@ -256,13 +268,16 @@ export default function Dashboard({ onNavigate, user }) {
     setPreviewLoading(true);
     setPreviewUrl('');
     setPreviewTextContent('');
+    setPreviewDocxHtml('');
+    setPreviewError('');
 
     const token = localStorage.getItem("token");
     const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(file.extension);
     const isPdf = file.extension === 'pdf';
     const isText = ['txt', 'html', 'css', 'js', 'jsx', 'json', 'md'].includes(file.extension);
+    const isDocx = ['docx', 'doc'].includes(file.extension);
 
-    if (!isImage && !isPdf && !isText) {
+    if (!isImage && !isPdf && !isText && !isDocx) {
       setPreviewLoading(false);
       return;
     }
@@ -288,6 +303,31 @@ export default function Dashboard({ onNavigate, user }) {
         }
         const text = await textRes.text();
         setPreviewTextContent(text);
+      }
+
+      if (isDocx) {
+        try {
+          const docxRes = await fetch(data.url);
+          if (!docxRes.ok) {
+            throw new Error("Failed to download document for preview");
+          }
+          const arrayBuffer = await docxRes.arrayBuffer();
+          try {
+            const result = await mammoth.convertToHtml({ arrayBuffer });
+            setPreviewDocxHtml(result.value || "<p>Empty document.</p>");
+          } catch (mammothErr) {
+            const textDecoder = new TextDecoder("utf-8");
+            const textContent = textDecoder.decode(arrayBuffer);
+            if (textContent && textContent.trim()) {
+              setPreviewDocxHtml(`<div className="whitespace-pre-wrap font-sans text-sm">${textContent}</div>`);
+            } else {
+              throw mammothErr;
+            }
+          }
+        } catch (err) {
+          console.error("DOCX conversion error:", err);
+          setPreviewError("Could not convert DOCX file to preview format.");
+        }
       }
     } catch (error) {
       showNotification("error", error.message);
@@ -362,7 +402,10 @@ export default function Dashboard({ onNavigate, user }) {
         inTrash: activeTab === 'trash' || file.deleted_at !== null,
         createdAt: file.created_at,
         updatedAt: file.created_at ? new Date(file.created_at).toISOString().split('T')[0] : '2026-08-30',
-        owner: 'me',
+        owner: file.is_shared ? (file.owner_name || 'Owner') : 'me',
+        shared: Boolean(file.is_shared),
+        shared_permission: file.shared_permission,
+        permission: file.shared_permission || 'owner',
         size: formatSize(file.file_size),
         location: activeTab === 'trash' ? 'Trash' : 'My Drive',
         reasonSuggested: 'Opened recently',
@@ -484,6 +527,13 @@ export default function Dashboard({ onNavigate, user }) {
   };
 
   const handleRenameFilePrompt = async (fileId, currentName) => {
+    const item = items.find(i => i.id === fileId);
+    const perm = (item?.permission || item?.shared_permission || '').toLowerCase();
+    if (item && item.shared && (perm === 'view' || perm === 'viewer')) {
+      alert("You do not have permission to edit this file");
+      return;
+    }
+
     const newName = prompt("Rename file:", currentName);
     if (!newName || newName === currentName) return;
 
@@ -510,6 +560,13 @@ export default function Dashboard({ onNavigate, user }) {
   };
 
   const handleDeleteFile = async (fileId) => {
+    const item = items.find(i => i.id === fileId);
+    const perm = (item?.permission || item?.shared_permission || '').toLowerCase();
+    if (item && item.shared && (perm === 'view' || perm === 'viewer')) {
+      alert("You do not have permission to delete this file");
+      return;
+    }
+
     if (!confirm("Are you sure you want to move this file to trash?")) return;
 
     try {
@@ -566,6 +623,7 @@ export default function Dashboard({ onNavigate, user }) {
       window.removeEventListener('popstate', handlePopState);
     };
   }, []);
+
   const [filterOwner, setFilterOwner] = useState('all');
   const [filterModified, setFilterModified] = useState('all');
   const [filterSource, setFilterSource] = useState('all');
@@ -852,8 +910,6 @@ export default function Dashboard({ onNavigate, user }) {
   const folderItems = filteredItems.filter(item => item.type === 'folder');
   const fileItems = filteredItems.filter(item => item.type === 'file');
 
-
-
   // People dropdown lists search filter
   const peopleOptions = [
     { id: 'Alex Rivera', name: 'Alex Rivera', email: 'alex.rivera@nexora.io', initials: 'AR' },
@@ -864,6 +920,60 @@ export default function Dashboard({ onNavigate, user }) {
     p.name.toLowerCase().includes(peopleSearch.toLowerCase()) ||
     p.email.toLowerCase().includes(peopleSearch.toLowerCase())
   );
+
+  const handleCreateFolderPrompt = async () => {
+    const folderName = prompt("Enter folder name:");
+    if (!folderName) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://localhost:8080/api/folders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: folderName,
+          parent_folder_id: currentFolderId,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to create folder");
+      }
+
+      await fetchDashboardData();
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  const handleSaveFileContent = async (fileId, newContent) => {
+    try {
+      const jwtToken = localStorage.getItem("token");
+      const res = await fetch(`http://localhost:8080/api/files/${fileId}/content`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwtToken}`,
+        },
+        body: JSON.stringify({ content: newContent }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to save file content");
+      }
+      showNotification("success", "File content saved successfully");
+      setPreviewTextContent(newContent);
+      setPreviewDocxHtml(`<div className="whitespace-pre-wrap font-sans text-sm">${newContent}</div>`);
+      fetchDashboardData();
+    } catch (err) {
+      showNotification("error", err.message);
+      throw err;
+    }
+  };
 
   return (
     <div className="flex w-full h-screen overflow-hidden font-sans text-sm text-slate-100 bg-[#070b13] select-none antialiased" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
@@ -879,205 +989,17 @@ export default function Dashboard({ onNavigate, user }) {
       {/* ==========================================
           LEFT SIDEBAR (Google Drive Layout)
           ========================================== */}
-      <aside
-        className={`fixed top-0 bottom-0 left-0 w-64 bg-slate-900/60 border-r border-slate-800/40 py-4 px-3 flex flex-col justify-between z-[100] md:sticky md:flex transform transition-transform duration-200 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-          }`}
-      >
-        <div className="flex flex-col gap-4">
-          {/* Logo & Nexora Branding */}
-          <div className="flex items-center justify-between px-3 py-1">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-600/10 border border-indigo-500/20">
-                <LogoIcon />
-              </div>
-              <span className="text-lg font-semibold text-white tracking-tight">
-                Nexora <span className="text-xs font-normal text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded ml-1">Drive</span>
-              </span>
-            </div>
-            {/* Mobile close button */}
-            <button
-              onClick={() => setIsSidebarOpen(false)}
-              className="p-1 rounded-md border border-slate-800 bg-slate-950/40 text-slate-400 hover:text-white md:hidden"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          {/* "+ New" Pill-style Button */}
-          <div className="relative px-2 py-2">
-            <button
-              onClick={() => setIsNewMenuOpen(!isNewMenuOpen)}
-              className="flex items-center gap-3 px-6 py-4 bg-slate-900 border border-slate-800 text-slate-200 font-medium rounded-[16px] shadow-lg hover:bg-slate-850 hover:shadow-xl transition-all outline-none duration-200 active:scale-[0.98]"
-            >
-              {/* Colorful Custom Plus Icon */}
-              <svg className="w-6 h-6" viewBox="0 0 36 36">
-                <path fill="#818cf8" d="M16 16v14h4V20h14v-4H20V2h-4v14H2v4h14z" />
-              </svg>
-              <span className="text-sm font-semibold tracking-wide">New</span>
-            </button>
-
-            {isNewMenuOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setIsNewMenuOpen(false)} />
-                <div className="absolute left-2 top-16 w-56 rounded-xl bg-slate-900 border border-slate-800 p-1.5 shadow-lg z-50 animate-in fade-in slide-in-from-top-2 duration-150 text-xs">
-                  <button
-                    onClick={async () => {
-                      setIsNewMenuOpen(false);
-                      const folderName = prompt("Enter folder name:");
-                      if (!folderName) return;
-
-                      try {
-                        const token = localStorage.getItem("token");
-                        const response = await fetch("http://localhost:8080/api/folders", {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                            Authorization: `Bearer ${token}`,
-                          },
-                          body: JSON.stringify({
-                            name: folderName,
-                            parent_folder_id: currentFolderId,
-                          }),
-                        });
-
-                        const data = await response.json();
-                        if (!response.ok) {
-                          throw new Error(data.message || "Failed to create folder");
-                        }
-
-                        await fetchDashboardData();
-                      } catch (error) {
-                        alert(error.message);
-                      }
-                    }}
-                    className="w-full text-left px-3 py-2 font-medium text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition flex items-center gap-2.5"
-                  >
-                    <FolderIcon className="w-4 h-4 text-indigo-400" />
-                    <span>New Folder</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsNewMenuOpen(false);
-                      document.getElementById("fileUploadInput").click();
-                    }}
-                    className="w-full text-left px-3 py-2 font-medium text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition flex items-center gap-2.5"
-                  >
-                    <svg className="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                    </svg>
-                    <span>File Upload</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsNewMenuOpen(false);
-                      document.getElementById("folderUploadInput").click();
-                    }}
-                    className="w-full text-left px-3 py-2 font-medium text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition flex items-center gap-2.5"
-                  >
-                    <svg className="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5M5 19v-2m14 2v-2" />
-                    </svg>
-                    <span>Folder Upload</span>
-                  </button>
-                </div>
-              </>
-            )}
-
-            <input
-              id="fileUploadInput"
-              type="file"
-              className="hidden"
-              onChange={async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                try {
-                  await handleUploadFile(file);
-                } finally {
-                  e.target.value = "";
-                }
-              }}
-            />
-
-            <input
-              id="folderUploadInput"
-              type="file"
-              webkitdirectory=""
-              directory=""
-              multiple
-              className="hidden"
-              onChange={async (e) => {
-                const files = Array.from(e.target.files);
-                if (files.length === 0) return;
-                try {
-                  await handleUploadFolder(files);
-                } finally {
-                  e.target.value = "";
-                }
-              }}
-            />
-          </div>
-
-          {/* Navigation Items */}
-          <nav className="flex flex-col gap-0.5 px-2">
-            {[
-              { id: 'home', label: 'Home', icon: <HomeIcon /> },
-              { id: 'projects', label: 'Projects', icon: <ProjectsIcon /> },
-              { id: 'drive', label: 'My Drive', icon: <DriveIcon /> },
-              { id: 'computers', label: 'Computers', icon: <ComputerIcon /> },
-              { id: 'shared', label: 'Shared with me', icon: <PeopleIcon /> },
-              { id: 'recent', label: 'Recent', icon: <ClockIcon /> },
-              { id: 'starred', label: 'Starred', icon: <StarIconOutline /> },
-              { id: 'spam', label: 'Spam', icon: <AlertIcon /> },
-              { id: 'trash', label: 'Trash', icon: <TrashIcon /> },
-              { id: 'storage', label: 'Storage', icon: <CloudIcon /> },
-            ].map(item => {
-              const isActive = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => handleTabSwitch(item.id)}
-                  className={`flex items-center gap-3 px-4 py-2 rounded-full text-xs font-medium transition duration-150 text-left ${isActive
-                      ? 'bg-slate-800/80 text-white font-semibold border-l-2 border-indigo-500'
-                      : 'text-slate-400 hover:bg-slate-800/30 hover:text-slate-200'
-                    }`}
-                >
-                  <span className={`${isActive ? 'text-indigo-400' : 'text-slate-500'}`}>
-                    {item.id === 'starred' && isActive ? <StarIconSolid /> : item.icon}
-                  </span>
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-
-        {/* Bottom Storage Meter */}
-        <div className="px-4 py-3 border-t border-slate-800/40 mt-auto">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-slate-400">
-              <CloudIcon />
-              <span className="text-[11px] font-semibold text-slate-300">Storage</span>
-            </div>
-
-            <div className="w-full bg-slate-800 rounded-full h-1 overflow-hidden">
-              <div className="bg-indigo-500 h-full rounded-full" style={{ width: '8%' }}></div>
-            </div>
-
-            <div className="text-[11px] text-slate-400">
-              1.2 GB of 15 GB used
-            </div>
-
-            <button
-              onClick={() => handleTabSwitch('storage')}
-              className="mt-2 w-full py-1.5 px-3 border border-slate-800 text-indigo-400 hover:bg-indigo-500/10 text-[11px] rounded-full font-semibold transition text-center"
-            >
-              Get more storage
-            </button>
-          </div>
-        </div>
-      </aside>
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+        isNewMenuOpen={isNewMenuOpen}
+        setIsNewMenuOpen={setIsNewMenuOpen}
+        activeTab={activeTab}
+        handleTabSwitch={handleTabSwitch}
+        handleUploadFile={handleUploadFile}
+        handleUploadFolder={handleUploadFolder}
+        onCreateFolderClick={handleCreateFolderPrompt}
+      />
 
       {/* ==========================================
           MAIN AREA (Header + Floated Workspace)
@@ -1085,113 +1007,20 @@ export default function Dashboard({ onNavigate, user }) {
       <main className="flex-1 flex flex-col h-screen min-w-0">
 
         {/* TOP HEADER */}
-        <header className="h-16 px-6 flex items-center justify-between gap-4 shrink-0 bg-[#070b13]/40 border-b border-slate-900/40">
-          {/* Hamburger Menu & Search */}
-          <div className="flex items-center gap-3 flex-1 max-w-2xl">
-            <button
-              onClick={() => setIsSidebarOpen(true)}
-              className="p-2 rounded-full hover:bg-slate-900 text-slate-400 md:hidden transition"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-
-            {/* Compact Search Bar */}
-            <div className="relative flex-1 group">
-              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-indigo-400 transition-colors">
-                <SearchIcon />
-              </span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search in Nexora Drive"
-                className="w-full pl-11 pr-10 py-2.5 rounded-full bg-slate-900/60 border border-slate-800/80 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:bg-slate-900 focus:border-slate-700 focus:shadow-md transition duration-150"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute inset-y-0 right-0 pr-4.5 flex items-center text-slate-400 hover:text-white text-xs font-semibold"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Right Header Controls */}
-          <div className="flex items-center gap-2">
-            <button className="p-2 rounded-full hover:bg-slate-900 text-slate-400 transition" title="Help">
-              <HelpIcon />
-            </button>
-            <button className="p-2 rounded-full hover:bg-slate-900 text-slate-400 transition" title="Settings">
-              <SettingsIcon />
-            </button>
-            <button className="p-2 rounded-full hover:bg-slate-900 text-slate-400 transition" title="Apps">
-              <AppsIcon />
-            </button>
-
-            {/* Profile Dropdown Trigger */}
-            <div className="relative ml-1">
-              <button
-                onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className="flex items-center gap-1.5 p-1 rounded-full border border-slate-800 hover:bg-slate-900 transition active:scale-[0.98] outline-none"
-              >
-                <div className="w-8 h-8 rounded-full bg-indigo-600/30 border border-indigo-500/30 text-white font-bold text-xs flex items-center justify-center">
-                  {initials}
-                </div>
-                <span className="hidden sm:inline text-xs font-medium text-slate-300 pr-0.5">{displayName}</span>
-                <svg className="w-3.5 h-3.5 text-slate-500 hidden sm:inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              {/* Profile Card Popover */}
-              {isProfileOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)} />
-                  <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-slate-900 border border-slate-800 p-4 shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                    <div className="flex items-center gap-3 pb-3.5 border-b border-slate-800">
-                      <div className="w-12 h-12 rounded-full bg-indigo-600/30 border border-indigo-500/30 text-white font-bold text-base flex items-center justify-center shrink-0">
-                        {initials}
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-sm font-semibold text-white truncate">{displayName}</span>
-                        <span className="text-xs text-slate-400 truncate">{displayUser.email}</span>
-                      </div>
-                    </div>
-
-                    <div className="py-3 border-b border-slate-800 flex flex-col gap-1.5 text-xs text-slate-300">
-                      <div className="flex justify-between items-center">
-                        <span>Account Plan</span>
-                        <span className="font-semibold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">Nexora Pro</span>
-                      </div>
-                    </div>
-
-                    <div className="pt-3">
-                      <button
-                        onClick={() => {
-                          setIsProfileOpen(false);
-                          onNavigate('login');
-                        }}
-                        className="w-full py-2 px-3 justify-center text-center rounded-lg text-xs font-semibold text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition duration-150 flex items-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                        <span>Sign Out</span>
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </header>
+        <DashboardHeader
+          setIsSidebarOpen={setIsSidebarOpen}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          isProfileOpen={isProfileOpen}
+          setIsProfileOpen={setIsProfileOpen}
+          initials={initials}
+          displayName={displayName}
+          displayUser={displayUser}
+          onNavigate={onNavigate}
+        />
 
         {/* WORKSPACE CONTENT BODY */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="workspace-content-body flex-1 flex overflow-hidden">
 
           {/* Main Workspace Card */}
           <div className="flex-1 bg-slate-900/30 border border-slate-800/60 m-2 mr-1 flex flex-col overflow-hidden shadow-xs rounded-2xl relative">
@@ -1214,7 +1043,7 @@ export default function Dashboard({ onNavigate, user }) {
                       <div key={crumb.id || 'root'} className="flex items-center gap-1 shrink-0">
                         {index > 0 && (
                           <svg className="w-3.5 h-3.5 text-slate-600 mx-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7-7" />
                           </svg>
                         )}
                         <button
@@ -1241,8 +1070,8 @@ export default function Dashboard({ onNavigate, user }) {
                     <button
                       onClick={() => setViewMode('list')}
                       className={`p-1.5 rounded-md transition duration-150 ${viewMode === 'list'
-                          ? 'bg-slate-800 text-indigo-400'
-                          : 'text-slate-500 hover:text-slate-300'
+                        ? 'bg-slate-800 text-indigo-400'
+                        : 'text-slate-500 hover:text-slate-300'
                         }`}
                       title="List view"
                     >
@@ -1251,8 +1080,8 @@ export default function Dashboard({ onNavigate, user }) {
                     <button
                       onClick={() => setViewMode('grid')}
                       className={`p-1.5 rounded-md transition duration-150 ${viewMode === 'grid'
-                          ? 'bg-slate-800 text-indigo-400'
-                          : 'text-slate-500 hover:text-slate-300'
+                        ? 'bg-slate-800 text-indigo-400'
+                        : 'text-slate-500 hover:text-slate-300'
                         }`}
                       title="Grid view"
                     >
@@ -1281,8 +1110,8 @@ export default function Dashboard({ onNavigate, user }) {
                   <button
                     onClick={() => setActiveFilterDropdown(activeFilterDropdown === 'type' ? null : 'type')}
                     className={`px-3 py-1 border text-xs rounded-lg flex items-center gap-1.5 transition ${filterType !== 'all'
-                        ? 'border-indigo-800 bg-indigo-950/50 text-indigo-300 font-semibold'
-                        : 'border-slate-800 bg-slate-900/35 text-slate-300 hover:bg-slate-850 hover:text-white'
+                      ? 'border-indigo-800 bg-indigo-950/50 text-indigo-300 font-semibold'
+                      : 'border-slate-800 bg-slate-900/35 text-slate-300 hover:bg-slate-850 hover:text-white'
                       }`}
                   >
                     <span>Type{filterType !== 'all' ? `: ${filterType.toUpperCase()}` : ''}</span>
@@ -1328,8 +1157,8 @@ export default function Dashboard({ onNavigate, user }) {
                   <button
                     onClick={() => setActiveFilterDropdown(activeFilterDropdown === 'people' ? null : 'people')}
                     className={`px-3 py-1 border text-xs rounded-lg flex items-center gap-1.5 transition ${filterOwner !== 'all'
-                        ? 'border-indigo-800 bg-indigo-950/50 text-indigo-300 font-semibold'
-                        : 'border-slate-800 bg-slate-900/35 text-slate-300 hover:bg-slate-850 hover:text-white'
+                      ? 'border-indigo-800 bg-indigo-950/50 text-indigo-300 font-semibold'
+                      : 'border-slate-800 bg-slate-900/35 text-slate-300 hover:bg-slate-850 hover:text-white'
                       }`}
                   >
                     <span>People{filterOwner !== 'all' ? `: ${filterOwner === 'link' ? 'Shared link' : filterOwner.split(' ')[0]}` : ''}</span>
@@ -1408,8 +1237,8 @@ export default function Dashboard({ onNavigate, user }) {
                   <button
                     onClick={() => setActiveFilterDropdown(activeFilterDropdown === 'modified' ? null : 'modified')}
                     className={`px-3 py-1 border text-xs rounded-lg flex items-center gap-1.5 transition ${filterModified !== 'all'
-                        ? 'border-indigo-800 bg-indigo-950/50 text-indigo-300 font-semibold'
-                        : 'border-slate-800 bg-slate-900/35 text-slate-300 hover:bg-slate-850 hover:text-white'
+                      ? 'border-indigo-800 bg-indigo-950/50 text-indigo-300 font-semibold'
+                      : 'border-slate-800 bg-slate-900/35 text-slate-300 hover:bg-slate-850 hover:text-white'
                       }`}
                   >
                     <span>Modified{filterModified !== 'all' ? ': Active' : ''}</span>
@@ -1515,8 +1344,8 @@ export default function Dashboard({ onNavigate, user }) {
                   <button
                     onClick={() => setActiveFilterDropdown(activeFilterDropdown === 'source' ? null : 'source')}
                     className={`px-3 py-1 border text-xs rounded-lg flex items-center gap-1.5 transition ${filterSource !== 'all'
-                        ? 'border-indigo-800 bg-indigo-950/50 text-indigo-300 font-semibold'
-                        : 'border-slate-800 bg-slate-900/35 text-slate-300 hover:bg-slate-850 hover:text-white'
+                      ? 'border-indigo-800 bg-indigo-950/50 text-indigo-300 font-semibold'
+                      : 'border-slate-800 bg-slate-900/35 text-slate-300 hover:bg-slate-850 hover:text-white'
                       }`}
                   >
                     <span>Source{filterSource !== 'all' ? `: ${filterSource.toUpperCase()}` : ''}</span>
@@ -1616,7 +1445,7 @@ export default function Dashboard({ onNavigate, user }) {
                         <h2 className="text-lg font-semibold text-white">Projects</h2>
                         <button
                           onClick={() => alert("Project creation is scheduled for later development days.")}
-                          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition"
+                          className="flex items-center gap-2 px-4 py-2 bg-indigo-650 hover:bg-indigo-600 text-white text-xs font-semibold rounded-lg shadow transition"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                             <line x1="12" x2="12" y1="5" y2="19" />
@@ -1664,61 +1493,14 @@ export default function Dashboard({ onNavigate, user }) {
                             <span className="text-xs font-bold tracking-wide text-slate-400">Folders</span>
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            {folderItems.map(folder => (
-                              <div
-                                key={folder.id}
-                                onClick={() => handleFolderClick(folder.id)}
-                                className="group bg-slate-900/20 hover:bg-slate-800/40 border border-slate-800/80 hover:border-slate-700/60 rounded-xl p-3.5 flex items-center justify-between transition cursor-pointer shadow-xs"
-                              >
-                                <div className="flex items-center gap-3 min-w-0">
-                                  <span className="p-2.5 rounded-lg bg-slate-950 text-indigo-400 border border-slate-850 group-hover:bg-indigo-500/10 group-hover:text-indigo-300 transition shrink-0">
-                                    <FolderIcon className="w-5 h-5" />
-                                  </span>
-                                  <div className="flex flex-col min-w-0">
-                                    <span className="text-xs font-semibold text-slate-200 truncate" title={folder.name}>
-                                      {folder.name}
-                                    </span>
-                                    <span className="text-[10px] text-slate-500 mt-0.5">
-                                      Folder
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    onClick={(e) => handleToggleStar(folder.id, e)}
-                                    className="p-1.5 rounded hover:bg-slate-800/50 text-slate-650 hover:text-amber-400 transition"
-                                  >
-                                    {folder.starred ? <StarIconSolid /> : <StarIconOutline />}
-                                  </button>
-                                  <button
-                                    className="p-1.5 rounded hover:bg-slate-800/50 text-slate-500 hover:text-white transition"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleRenameFolderPrompt(folder.id, folder.name);
-                                    }}
-                                    title="Rename folder"
-                                  >
-                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                    </svg>
-                                  </button>
-                                  <button
-                                    className="p-1.5 rounded hover:bg-slate-800/50 text-slate-500 hover:text-red-400 transition shrink-0"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteFolder(folder.id);
-                                    }}
-                                    title="Move to trash"
-                                  >
-                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                          <FileGrid
+                            items={folderItems}
+                            viewType="folder"
+                            onFolderClick={handleFolderClick}
+                            onToggleStar={handleToggleStar}
+                            onRenameFolder={handleRenameFolderPrompt}
+                            onDeleteFolder={handleDeleteFolder}
+                          />
                         </div>
                       )}
 
@@ -1733,146 +1515,25 @@ export default function Dashboard({ onNavigate, user }) {
                           </div>
 
                           {viewMode === 'list' ? (
-                            /* LIST VIEW TABLE */
-                            <div className="border border-slate-800/60 rounded-xl overflow-hidden shadow-sm bg-slate-900/10">
-                              <table className="min-w-full border-collapse text-left text-xs">
-                                <thead>
-                                  <tr className="bg-slate-900/40 border-b border-slate-800/80 text-slate-400 font-semibold select-none">
-                                    <th className="py-3 px-4 font-semibold w-1/3">Name</th>
-                                    <th className="py-3 px-4 font-semibold w-1/4 hidden sm:table-cell">Reason suggested</th>
-                                    <th className="py-3 px-4 font-semibold hidden md:table-cell">Owner</th>
-                                    <th className="py-3 px-4 font-semibold hidden sm:table-cell">Location</th>
-                                    <th className="py-3 px-4 w-12"></th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-850/60">
-                                  {fileItems.map(file => (
-                                    <tr key={file.id} className="group hover:bg-slate-800/35 text-slate-350 hover:text-white transition duration-150">
-                                      <td className="py-2.5 px-4 font-medium">
-                                        <div className="flex items-center gap-2.5 min-w-0">
-                                          <span className="shrink-0">{getFileIcon(file.extension)}</span>
-                                          <span 
-                                            className="truncate max-w-[160px] sm:max-w-xs hover:text-indigo-400 cursor-pointer transition" 
-                                            title={file.name}
-                                            onClick={() => handlePreviewFile(file)}
-                                          >
-                                            {file.name}
-                                          </span>
-                                        </div>
-                                      </td>
-                                      <td className="py-2.5 px-4 text-slate-500 hidden sm:table-cell">
-                                        {file.reasonSuggested || 'You opened • Aug 20'}
-                                      </td>
-                                      <td className="py-2.5 px-4 hidden md:table-cell">
-                                        <div className="flex items-center gap-2">
-                                          <div className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 text-[8px] uppercase">
-                                            {file.owner === 'me' ? 'me' : file.owner.split(' ').map(n => n[0]).join('')}
-                                          </div>
-                                          <span className="text-slate-400">{file.owner === 'me' ? 'me' : file.owner}</span>
-                                        </div>
-                                      </td>
-                                      <td className="py-2.5 px-4 text-slate-500 hidden sm:table-cell">
-                                        <div className="flex items-center gap-1.5">
-                                          <FolderIcon className="w-3.5 h-3.5 text-indigo-400/60" />
-                                          <span>{file.location || 'My Drive'}</span>
-                                        </div>
-                                      </td>
-                                      <td className="py-2.5 px-4 text-right">
-                                        <div className="flex items-center justify-end gap-1.5">
-                                          <button
-                                            onClick={(e) => handleToggleStar(file.id, e)}
-                                            className="text-slate-600 hover:text-amber-400 p-1 rounded hover:bg-slate-800/50 transition"
-                                          >
-                                            {file.starred ? <StarIconSolid /> : <StarIconOutline />}
-                                          </button>
-                                          <button
-                                            className="p-1 rounded hover:bg-slate-800/50 text-slate-400 hover:text-white transition"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleRenameFilePrompt(file.id, file.name);
-                                            }}
-                                            title="Rename file"
-                                          >
-                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                            </svg>
-                                          </button>
-                                          <button
-                                            className="p-1 rounded hover:bg-slate-800/50 text-slate-400 hover:text-red-400 transition"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleDeleteFile(file.id);
-                                            }}
-                                            title="Move to trash"
-                                          >
-                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                          </button>
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
+                            <FileList
+                              items={fileItems}
+                              activeTab="drive"
+                              onPreviewFile={handlePreviewFile}
+                              onToggleStar={handleToggleStar}
+                              onRenameFile={handleRenameFilePrompt}
+                              onDeleteFile={handleDeleteFile}
+                              onShareFile={setSelectedShareFile}
+                            />
                           ) : (
-                            /* GRID VIEW COMPACT CARDS */
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                              {fileItems.map(file => (
-                                <div
-                                  key={file.id}
-                                  onClick={() => handlePreviewFile(file)}
-                                  className="group bg-slate-900/20 hover:bg-slate-800/40 border border-slate-800/80 hover:border-slate-700/60 rounded-xl p-3 flex flex-col justify-between h-24 transition cursor-pointer select-none shadow-xs"
-                                >
-                                  <div className="flex items-start justify-between">
-                                    <span className="shrink-0">{getFileIcon(file.extension)}</span>
-                                    <div className="flex items-center gap-1">
-                                      <button
-                                        onClick={(e) => handleToggleStar(file.id, e)}
-                                        className="text-slate-600 hover:text-amber-400 p-0.5 rounded transition shrink-0"
-                                      >
-                                        {file.starred ? <StarIconSolid /> : <StarIconOutline />}
-                                      </button>
-                                      <button
-                                        className="p-0.5 rounded hover:bg-slate-800/50 text-slate-400 hover:text-white transition shrink-0"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleRenameFilePrompt(file.id, file.name);
-                                        }}
-                                        title="Rename file"
-                                      >
-                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                        </svg>
-                                      </button>
-                                      <button
-                                        className="p-0.5 rounded hover:bg-slate-800/50 text-slate-400 hover:text-red-400 transition shrink-0"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleDeleteFile(file.id);
-                                        }}
-                                        title="Move to trash"
-                                      >
-                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  <div className="mt-2 min-w-0">
-                                    <h4 className="text-xs font-semibold text-slate-200 group-hover:text-indigo-400 truncate" title={file.name}>
-                                      {file.name}
-                                    </h4>
-                                    <div className="flex items-center justify-between text-[10px] text-slate-500 mt-1 font-medium">
-                                      <span>{file.size}</span>
-                                      <span>{file.updatedAt}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
+                            <FileGrid
+                              items={fileItems}
+                              viewType="file"
+                              onPreviewFile={handlePreviewFile}
+                              onToggleStar={handleToggleStar}
+                              onRenameFile={handleRenameFilePrompt}
+                              onDeleteFile={handleDeleteFile}
+                              onShareFile={setSelectedShareFile}
+                            />
                           )}
                         </div>
                       )}
@@ -1883,78 +1544,12 @@ export default function Dashboard({ onNavigate, user }) {
                       RENDER: HOME ('home')
                       ========================================== */}
                   {activeTab === 'home' && (
-                    <div className="space-y-6">
-                      {/* Welcome banner */}
-                      <div className="bg-gradient-to-r from-slate-900 to-indigo-950/40 border border-slate-800/60 rounded-2xl p-5 flex items-center justify-between gap-4 shadow-sm">
-                        <div className="space-y-1">
-                          <h2 className="text-base font-bold text-slate-100">Welcome to Nexora Drive</h2>
-                          <p className="text-xs text-slate-400">Access and organize all your files easily in one central cloud drive workspace.</p>
-                        </div>
-                        <div className="text-3xl hidden sm:block select-none">✨</div>
-                      </div>
-
-                      {/* Suggested Files Grid */}
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Suggested files</h3>
-                          <span className="text-[10px] text-slate-500 font-medium">Updated recently</span>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                          {items.filter(item => !item.inTrash && item.type === 'file').slice(0, 3).map(file => (
-                            <div
-                              key={file.id}
-                              onClick={() => handlePreviewFile(file)}
-                              className="group bg-slate-900/20 hover:bg-slate-800/40 border border-slate-800/80 rounded-xl p-4 flex flex-col justify-between h-28 transition cursor-pointer shadow-xs"
-                            >
-                              <div className="flex items-start justify-between">
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  <span className="shrink-0">{getFileIcon(file.extension)}</span>
-                                  <span className="text-xs font-semibold text-slate-200 group-hover:text-indigo-400 truncate" title={file.name}>
-                                    {file.name}
-                                  </span>
-                                </div>
-                                <button
-                                  onClick={(e) => handleToggleStar(file.id, e)}
-                                  className="text-slate-600 hover:text-amber-400 p-0.5 rounded opacity-0 group-hover:opacity-100 transition shrink-0"
-                                >
-                                  {file.starred ? <StarIconSolid /> : <StarIconOutline />}
-                                </button>
-                              </div>
-                              <div className="mt-3 border-t border-slate-800/80 pt-2.5 flex items-center justify-between text-[10px] text-slate-500">
-                                <span className="truncate">Reason: {file.reasonSuggested}</span>
-                                <span className="font-semibold text-slate-400">{file.size}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Recent Activities List */}
-                      <div className="space-y-3">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Recent Activity</h3>
-                        <div className="border border-slate-800/60 rounded-xl overflow-hidden shadow-xs bg-slate-900/10">
-                          <div className="divide-y divide-slate-850/60">
-                            {items.filter(item => !item.inTrash).slice(0, 5).map(item => (
-                              <div 
-                                key={item.id} 
-                                onClick={() => item.type === 'file' && handlePreviewFile(item)}
-                                className={`p-3 flex items-center justify-between gap-4 text-xs hover:bg-slate-800/35 transition ${item.type === 'file' ? 'cursor-pointer hover:text-indigo-400' : ''}`}
-                              >
-                                <div className="flex items-center gap-3 min-w-0">
-                                  <span>{item.type === 'folder' ? <FolderIcon className="w-4 h-4 text-indigo-400" /> : getFileIcon(item.extension)}</span>
-                                  <span className="font-medium text-slate-350 truncate">{item.name}</span>
-                                </div>
-                                <div className="flex items-center gap-6 shrink-0 text-slate-500">
-                                  <span>Modified {item.updatedAt}</span>
-                                  <span className="hidden sm:inline w-16 text-right font-medium text-slate-400">{item.size}</span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <HomeSection
+                      items={items}
+                      onPreviewFile={handlePreviewFile}
+                      onToggleStar={handleToggleStar}
+                      onShareFile={setSelectedShareFile}
+                    />
                   )}
 
                   {/* ==========================================
@@ -1987,46 +1582,21 @@ export default function Dashboard({ onNavigate, user }) {
                       ========================================== */}
                   {activeTab === 'shared' && (
                     <div className="space-y-3">
-                      <div className="border border-slate-800/60 rounded-xl overflow-hidden shadow-xs bg-slate-900/10">
-                        <table className="min-w-full border-collapse text-left text-xs">
-                          <thead>
-                            <tr className="bg-slate-900/40 border-b border-slate-800/80 text-slate-400 font-semibold select-none">
-                              <th className="py-3 px-4 font-semibold w-1/3">Name</th>
-                              <th className="py-3 px-4 font-semibold">Shared by</th>
-                              <th className="py-3 px-4 font-semibold">Share Date</th>
-                              <th className="py-3 px-4 font-semibold w-24">Size</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-850/60">
-                            {fileItems.map(file => (
-                              <tr key={file.id} className="hover:bg-slate-800/35 text-slate-350 hover:text-white transition">
-                                <td className="py-3 px-4 font-medium">
-                                  <div className="flex items-center gap-2.5 min-w-0">
-                                    <span className="shrink-0">{getFileIcon(file.extension)}</span>
-                                    <span 
-                                      className="truncate cursor-pointer hover:text-indigo-400 transition" 
-                                      title={file.name}
-                                      onClick={() => handlePreviewFile(file)}
-                                    >
-                                      {file.name}
-                                    </span>
-                                  </div>
-                                </td>
-                                <td className="py-3 px-4">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 text-[8px] uppercase">
-                                      {file.owner === 'me' ? 'me' : file.owner.split(' ').map(n => n[0]).join('')}
-                                    </div>
-                                    <span>{file.owner === 'me' ? 'me' : file.owner}</span>
-                                  </div>
-                                </td>
-                                <td className="py-3 px-4 text-slate-500">{file.updatedAt}</td>
-                                <td className="py-3 px-4 text-slate-500">{file.size}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                      {viewMode === 'list' ? (
+                        <FileList
+                          items={fileItems}
+                          activeTab="shared"
+                          onPreviewFile={handlePreviewFile}
+                          onShareFile={setSelectedShareFile}
+                        />
+                      ) : (
+                        <FileGrid
+                          items={fileItems}
+                          viewType="file"
+                          onPreviewFile={handlePreviewFile}
+                          onShareFile={setSelectedShareFile}
+                        />
+                      )}
                     </div>
                   )}
 
@@ -2035,39 +1605,21 @@ export default function Dashboard({ onNavigate, user }) {
                       ========================================== */}
                   {activeTab === 'recent' && (
                     <div className="space-y-3">
-                      <div className="border border-slate-800/60 rounded-xl overflow-hidden shadow-xs bg-slate-900/10">
-                        <table className="min-w-full border-collapse text-left text-xs">
-                          <thead>
-                            <tr className="bg-slate-900/40 border-b border-slate-800/80 text-slate-400 font-semibold select-none">
-                              <th className="py-3 px-4 font-semibold">Name</th>
-                              <th className="py-3 px-4 font-semibold">Activity</th>
-                              <th className="py-3 px-4 font-semibold">Date modified</th>
-                              <th className="py-3 px-4 font-semibold w-24">Size</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-850/60">
-                            {fileItems.map(file => (
-                              <tr key={file.id} className="hover:bg-slate-800/35 text-slate-350 hover:text-white transition">
-                                <td className="py-3 px-4 font-medium">
-                                  <div className="flex items-center gap-2.5 min-w-0">
-                                    <span className="shrink-0">{getFileIcon(file.extension)}</span>
-                                    <span 
-                                      className="truncate cursor-pointer hover:text-indigo-400 transition" 
-                                      title={file.name}
-                                      onClick={() => handlePreviewFile(file)}
-                                    >
-                                      {file.name}
-                                    </span>
-                                  </div>
-                                </td>
-                                <td className="py-3 px-4 text-slate-500">{file.reasonSuggested}</td>
-                                <td className="py-3 px-4 text-slate-500">{file.updatedAt}</td>
-                                <td className="py-3 px-4 text-slate-500">{file.size}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                      {viewMode === 'list' ? (
+                        <FileList
+                          items={fileItems}
+                          activeTab="recent"
+                          onPreviewFile={handlePreviewFile}
+                          onShareFile={setSelectedShareFile}
+                        />
+                      ) : (
+                        <FileGrid
+                          items={fileItems}
+                          viewType="file"
+                          onPreviewFile={handlePreviewFile}
+                          onShareFile={setSelectedShareFile}
+                        />
+                      )}
                     </div>
                   )}
 
@@ -2075,83 +1627,14 @@ export default function Dashboard({ onNavigate, user }) {
                       RENDER: STARRED ('starred')
                       ========================================== */}
                   {activeTab === 'starred' && (
-                    <div className="space-y-6">
-                      {folderItems.length > 0 && (
-                        <div className="space-y-3">
-                          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Starred Folders</h3>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                            {folderItems.map(folder => (
-                              <div
-                                key={folder.id}
-                                onClick={() => handleFolderClick(folder.id)}
-                                className="group bg-slate-900/20 hover:bg-slate-800/40 border border-slate-800/80 rounded-lg p-2.5 flex items-center justify-between transition cursor-pointer shadow-xs"
-                              >
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  <span className="text-indigo-400 shrink-0">
-                                    <FolderIcon className="w-4 h-4" />
-                                  </span>
-                                  <span className="text-xs font-semibold text-slate-200 truncate" title={folder.name}>
-                                    {folder.name}
-                                  </span>
-                                </div>
-                                <button
-                                  onClick={(e) => handleToggleStar(folder.id, e)}
-                                  className="text-amber-500 p-0.5 rounded transition shrink-0"
-                                >
-                                  <StarIconSolid />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {fileItems.length > 0 && (
-                        <div className="space-y-3">
-                          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Starred Files</h3>
-                          <div className="border border-slate-800/60 rounded-xl overflow-hidden shadow-xs bg-slate-900/10">
-                            <table className="min-w-full border-collapse text-left text-xs">
-                              <thead>
-                                <tr className="bg-slate-900/40 border-b border-slate-800/80 text-slate-400 font-semibold select-none">
-                                  <th className="py-3 px-4 font-semibold">Name</th>
-                                  <th className="py-3 px-4 font-semibold">Owner</th>
-                                  <th className="py-3 px-4 font-semibold">Modified</th>
-                                  <th className="py-3 px-4 w-12"></th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-850/60">
-                                {fileItems.map(file => (
-                                  <tr key={file.id} className="group hover:bg-slate-800/35 text-slate-350 hover:text-white transition">
-                                    <td className="py-2.5 px-4 font-medium">
-                                      <div className="flex items-center gap-2.5 min-w-0">
-                                        <span className="shrink-0">{getFileIcon(file.extension)}</span>
-                                        <span 
-                                          className="truncate cursor-pointer hover:text-indigo-400 transition" 
-                                          title={file.name}
-                                          onClick={() => handlePreviewFile(file)}
-                                        >
-                                          {file.name}
-                                        </span>
-                                      </div>
-                                    </td>
-                                    <td className="py-2.5 px-4 text-slate-500">{file.owner}</td>
-                                    <td className="py-2.5 px-4 text-slate-500">{file.updatedAt}</td>
-                                    <td className="py-2.5 px-4 text-right">
-                                      <button
-                                        onClick={(e) => handleToggleStar(file.id, e)}
-                                        className="text-amber-500 p-1 rounded hover:bg-slate-800/50 transition"
-                                      >
-                                        <StarIconSolid />
-                                      </button>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                    <StarredSection
+                      folderItems={folderItems}
+                      fileItems={fileItems}
+                      onFolderClick={handleFolderClick}
+                      onToggleStar={handleToggleStar}
+                      onPreviewFile={handlePreviewFile}
+                      onShareFile={setSelectedShareFile}
+                    />
                   )}
 
                   {/* ==========================================
@@ -2175,72 +1658,11 @@ export default function Dashboard({ onNavigate, user }) {
                       RENDER: TRASH ('trash')
                       ========================================== */}
                   {activeTab === 'trash' && (
-                    <div className="space-y-4">
-                      {/* Notice Banner */}
-                      <div className="bg-amber-950/20 border border-amber-900/40 rounded-xl p-3.5 flex items-center gap-3 text-xs text-amber-300">
-                        <AlertIcon />
-                        <span>Items in trash will be permanently deleted automatically after 30 days.</span>
-                      </div>
-
-                      {filteredItems.length === 0 ? (
-                        <div className="text-center py-20">
-                          <div className="w-16 h-16 rounded-full bg-slate-900/60 border border-slate-800/60 flex items-center justify-center text-slate-500 mx-auto mb-4">
-                            <TrashIcon />
-                          </div>
-                          <h3 className="text-sm font-semibold text-white">Trash is empty</h3>
-                          <p className="text-slate-400 text-xs mt-1">No deleted files or folders in your account.</p>
-                        </div>
-                      ) : (
-                        <div className="border border-slate-800/60 rounded-xl overflow-hidden shadow-xs bg-slate-900/10">
-                          <table className="min-w-full border-collapse text-left text-xs">
-                            <thead>
-                              <tr className="bg-slate-900/40 border-b border-slate-800/80 text-slate-400 font-semibold select-none">
-                                <th className="py-3 px-4 font-semibold">Name</th>
-                                <th className="py-3 px-4 font-semibold">Date Deleted</th>
-                                <th className="py-3 px-4 font-semibold w-24">Size</th>
-                                <th className="py-3 px-4 w-28 text-right">Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-850/60">
-                              {filteredItems.map(item => (
-                                <tr key={item.id} className="hover:bg-slate-800/35 text-slate-350 hover:text-white transition">
-                                  <td className="py-2.5 px-4 font-medium">
-                                    <div className="flex items-center gap-2.5 min-w-0">
-                                      <span className="shrink-0">{item.type === 'folder' ? <FolderIcon className="w-4 h-4 text-slate-400" /> : getFileIcon(item.extension)}</span>
-                                      <span className="truncate" title={item.name}>{item.name}</span>
-                                    </div>
-                                  </td>
-                                  <td className="py-2.5 px-4 text-slate-500">{item.updatedAt}</td>
-                                  <td className="py-2.5 px-4 text-slate-500">{item.size}</td>
-                                  <td className="py-2.5 px-4 text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                      {/* Restore Action */}
-                                      <button
-                                        onClick={(e) => handleRestoreItem(item.id, e)}
-                                        className="py-1 px-2 border border-slate-850 rounded hover:bg-slate-800 font-semibold text-indigo-400 transition"
-                                        title="Restore item"
-                                      >
-                                        Restore
-                                      </button>
-                                      {/* Permanent Delete Action */}
-                                      <button
-                                        onClick={(e) => handleDeletePermanent(item.id, e)}
-                                        className="p-1 rounded text-red-400 hover:bg-red-950/40 border border-transparent hover:border-red-900/40 transition"
-                                        title="Delete permanently"
-                                      >
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
+                    <TrashSection
+                      items={filteredItems}
+                      onRestoreItem={handleRestoreItem}
+                      onDeletePermanent={handleDeletePermanent}
+                    />
                   )}
 
                   {/* ==========================================
@@ -2313,8 +1735,8 @@ export default function Dashboard({ onNavigate, user }) {
                                     <td className="py-3 px-4 font-medium">
                                       <div className="flex items-center gap-2.5 min-w-0">
                                         <span className="shrink-0">{getFileIcon(file.extension)}</span>
-                                        <span 
-                                          className="truncate cursor-pointer hover:text-indigo-400 transition" 
+                                        <span
+                                          className="truncate cursor-pointer hover:text-indigo-400 transition"
                                           title={file.name}
                                           onClick={() => handlePreviewFile(file)}
                                         >
@@ -2367,26 +1789,21 @@ export default function Dashboard({ onNavigate, user }) {
 
         </div>
       </main>
+
+      {/* Toast Notifications */}
       {notification && (
-        <div className={`fixed bottom-6 right-6 z-[9999] px-4 py-3 rounded-xl border shadow-xl flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-200 ${notification.type === 'success'
-            ? 'bg-slate-900 border-emerald-500/30 text-emerald-400'
-            : 'bg-slate-900 border-rose-500/30 text-rose-400'
-          }`}>
-          {notification.type === 'success' ? (
-            <svg className="w-5 h-5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          ) : (
-            <svg className="w-5 h-5 text-rose-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          )}
-          <div className="flex flex-col text-xs">
-            <span className="font-semibold">{notification.type === 'success' ? 'Success' : 'Error'}</span>
-            <span className="text-slate-300 mt-0.5">{notification.message}</span>
-          </div>
-          <button onClick={() => setNotification(null)} className="ml-2 text-slate-500 hover:text-slate-350">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl border shadow-lg text-xs font-semibold flex items-center gap-2 animate-in slide-in-from-top-2 duration-200 ${
+          notification.type === 'success' 
+            ? 'bg-emerald-950/90 border-emerald-800 text-emerald-300' 
+            : 'bg-rose-950/90 border-rose-800 text-rose-300'
+        }`}>
+          <span>{notification.type === 'success' ? '✓' : '✕'}</span>
+          <span>{notification.message}</span>
+          <button 
+            onClick={() => setNotification(null)}
+            className="ml-2 text-slate-400 hover:text-white"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -2399,9 +1816,21 @@ export default function Dashboard({ onNavigate, user }) {
         previewLoading={previewLoading}
         previewUrl={previewUrl}
         previewTextContent={previewTextContent}
+        previewDocxHtml={previewDocxHtml}
+        previewError={previewError}
         onClose={() => setSelectedPreviewFile(null)}
         getFileIcon={getFileIcon}
+        onSaveContent={handleSaveFileContent}
       />
+
+      {/* SHARE MODAL */}
+      {selectedShareFile && (
+        <ShareModal
+          file={selectedShareFile}
+          onClose={() => setSelectedShareFile(null)}
+          showNotification={showNotification}
+        />
+      )}
     </div>
   );
 }

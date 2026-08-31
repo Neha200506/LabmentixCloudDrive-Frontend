@@ -9,6 +9,43 @@ export default function Login({ onNavigate }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSubmitting, setForgotSubmitting] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState('');
+  const [forgotError, setForgotError] = useState('');
+
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault();
+    setForgotMessage('');
+    setForgotError('');
+
+    if (!forgotEmail || !/\S+@\S+\.\S+/.test(forgotEmail)) {
+      setForgotError('Please enter a valid email address');
+      return;
+    }
+
+    setForgotSubmitting(true);
+    try {
+      const response = await fetch('http://localhost:8080/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail.trim() }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setForgotMessage(data.message || 'Password reset link sent to your email.');
+      } else {
+        setForgotError(data.message || 'Failed to request password reset');
+      }
+    } catch (err) {
+      console.error(err);
+      setForgotError('An error occurred. Please try again.');
+    } finally {
+      setForgotSubmitting(false);
+    }
+  };
+
   const validate = () => {
     const tempErrors = {};
 
@@ -260,7 +297,13 @@ export default function Login({ onNavigate }) {
 
                 <a
                   href="#forgot"
-                  onClick={(e) => e.preventDefault()}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setShowForgotModal(true);
+                    setForgotEmail(email);
+                    setForgotMessage('');
+                    setForgotError('');
+                  }}
                   className="text-xs font-medium text-indigo-400 hover:text-indigo-300 transition duration-150"
                 >
                   Forgot Password?
@@ -280,7 +323,7 @@ export default function Login({ onNavigate }) {
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 002.25 2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
+                      d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 00-2.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
                     />
                   </svg>
                 </div>
@@ -388,6 +431,77 @@ export default function Login({ onNavigate }) {
           </div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotModal && (
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4 animate-in fade-in duration-200"
+          onClick={() => setShowForgotModal(false)}
+        >
+          <div 
+            className="bg-[#090e18] border border-slate-800/80 rounded-2xl w-full max-w-md flex flex-col shadow-2xl overflow-hidden p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center pb-2 border-b border-slate-800/60">
+              <h3 className="text-base font-bold text-white">Reset Password</h3>
+              <button
+                onClick={() => setShowForgotModal(false)}
+                className="text-slate-400 hover:text-white transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Enter your account email address and we'll send you a link to reset your password.
+            </p>
+
+            {forgotMessage && (
+              <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+                {forgotMessage}
+              </div>
+            )}
+
+            {forgotError && (
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium">
+                {forgotError}
+              </div>
+            )}
+
+            <form onSubmit={handleForgotSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  placeholder="name@company.com"
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 text-white rounded-xl text-xs focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotModal(false)}
+                  className="px-4 py-2 border border-slate-800 hover:bg-slate-900 text-slate-300 text-xs font-semibold rounded-lg transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={forgotSubmitting}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg shadow-sm transition"
+                >
+                  {forgotSubmitting ? 'Sending...' : 'Send Reset Link'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
