@@ -5,6 +5,9 @@ export default function TrashSection({
   items,
   onRestoreItem,
   onDeletePermanent,
+  sortBy,
+  sortOrder,
+  onSort,
 }) {
   return (
     <div className="space-y-4">
@@ -28,6 +31,9 @@ export default function TrashSection({
           activeTab="trash"
           onRestoreItem={onRestoreItem}
           onDeletePermanent={onDeletePermanent}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          onSort={onSort}
         />
       )}
     </div>

@@ -138,46 +138,6 @@ function App() {
           user={user}
         />
       )}
-
-      {/* Floating Development view switcher */}
-      <div className="fixed bottom-3 right-3 bg-slate-900/80 border border-slate-800 rounded-md p-1 shadow-lg backdrop-blur-sm z-[9999] flex items-center gap-1 text-[9px] font-bold select-none opacity-40 hover:opacity-100 transition-opacity">
-        <span className="text-slate-500 px-1.5 uppercase tracking-wider text-[8px]">
-          Dev
-        </span>
-
-        <button
-          onClick={() => handleNavigate('login')}
-          className={`px-1.5 py-0.5 rounded transition ${
-            currentPage === 'login'
-              ? 'bg-indigo-600 text-white'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
-          }`}
-        >
-          Login
-        </button>
-
-        <button
-          onClick={() => handleNavigate('signup')}
-          className={`px-1.5 py-0.5 rounded transition ${
-            currentPage === 'signup'
-              ? 'bg-indigo-600 text-white'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
-          }`}
-        >
-          Signup
-        </button>
-
-        <button
-          onClick={() => handleNavigate('dashboard')}
-          className={`px-1.5 py-0.5 rounded transition ${
-            currentPage === 'dashboard'
-              ? 'bg-indigo-600 text-white'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
-          }`}
-        >
-          Dashboard
-        </button>
-      </div>
     </div>
   );
 }

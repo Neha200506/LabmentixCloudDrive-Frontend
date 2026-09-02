@@ -7,8 +7,46 @@ export default function HomeSection({
   onToggleStar,
   onShareFile,
 }) {
-  const suggestedFiles = items.filter(item => !item.inTrash && item.type === 'file').slice(0, 3);
-  const recentActivities = items.filter(item => !item.inTrash).slice(0, 5);
+  const suggestedFiles = items
+    .filter(item => !item.inTrash && item.type === 'file')
+    .map(file => {
+      let reason = file.reasonSuggested || 'Opened recently';
+      let priority = 0;
+
+      if (file.starred) {
+        reason = 'Starred by you';
+        priority += 30;
+      }
+      if (file.lastActionType) {
+        if (file.lastActionType === 'Uploaded') {
+          reason = 'Recently uploaded';
+          priority += 25;
+        } else if (file.lastActionType === 'Modified') {
+          reason = 'Edited recently';
+          priority += 20;
+        } else if (file.lastActionType === 'Opened') {
+          reason = 'Opened recently';
+          priority += 15;
+        } else if (file.lastActionType === 'Starred') {
+          reason = 'Starred by you';
+          priority += 30;
+        }
+      }
+
+      const fileTime = file.lastAccessedAt || new Date(file.createdAt || file.updatedAt || 0).getTime();
+      return { ...file, computedReason: reason, _score: priority + fileTime };
+    })
+    .sort((a, b) => b._score - a._score)
+    .slice(0, 3);
+
+  const recentActivities = [...items]
+    .filter(item => !item.inTrash)
+    .sort((a, b) => {
+      const timeA = a.lastAccessedAt || new Date(a.createdAt || a.updatedAt || 0).getTime();
+      const timeB = b.lastAccessedAt || new Date(b.createdAt || b.updatedAt || 0).getTime();
+      return timeB - timeA;
+    })
+    .slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -64,7 +102,7 @@ export default function HomeSection({
                 </div>
               </div>
               <div className="mt-3 border-t border-slate-800/80 pt-2.5 flex items-center justify-between text-[10px] text-slate-500">
-                <span className="truncate">Reason: {file.reasonSuggested}</span>
+                <span className="truncate">Reason: {file.computedReason || file.reasonSuggested || 'Opened recently'}</span>
                 <span className="font-semibold text-slate-400">{file.size}</span>
               </div>
             </div>
@@ -88,7 +126,7 @@ export default function HomeSection({
                   <span className="font-medium text-slate-350 truncate">{item.name}</span>
                 </div>
                 <div className="flex items-center gap-6 shrink-0 text-slate-500">
-                  <span>Modified {item.updatedAt}</span>
+                  <span>{item.lastActionType || 'Modified'} {item.updatedAt}</span>
                   <span className="hidden sm:inline w-16 text-right font-medium text-slate-400">{item.size}</span>
                 </div>
               </div>

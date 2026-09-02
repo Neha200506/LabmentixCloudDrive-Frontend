@@ -1,9 +1,7 @@
 import {
   LogoIcon,
   HomeIcon,
-  ProjectsIcon,
   DriveIcon,
-  ComputerIcon,
   PeopleIcon,
   ClockIcon,
   StarIconOutline,
@@ -120,9 +118,7 @@ export default function Sidebar({
         <nav className="flex flex-col gap-0.5 px-2">
           {[
             { id: 'home', label: 'Home', icon: <HomeIcon /> },
-            { id: 'projects', label: 'Projects', icon: <ProjectsIcon /> },
             { id: 'drive', label: 'My Drive', icon: <DriveIcon /> },
-            { id: 'computers', label: 'Computers', icon: <ComputerIcon /> },
             { id: 'shared', label: 'Shared with me', icon: <PeopleIcon /> },
             { id: 'recent', label: 'Recent', icon: <ClockIcon /> },
             { id: 'starred', label: 'Starred', icon: <StarIconOutline /> },

@@ -197,6 +197,7 @@ export default function FilePreviewModal({
                 <img 
                   src={previewUrl} 
                   alt={selectedPreviewFile.name} 
+                  loading="lazy"
                   className="max-w-full max-h-[60vh] object-contain rounded-lg shadow-md"
                 />
               )}
@@ -237,10 +238,27 @@ export default function FilePreviewModal({
                     dangerouslySetInnerHTML={{ __html: previewDocxHtml || "<p className='text-slate-500 italic'>Empty document.</p>" }}
                   />
                 )
+              )}              {/* PPT / PPTX Preview */}
+              {['ppt', 'pptx'].includes(selectedPreviewFile.extension) && previewUrl && (
+                <iframe 
+                  src={previewUrl.includes('localhost') ? previewUrl : `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(previewUrl)}`}
+                  title={selectedPreviewFile.name} 
+                  className="w-full h-[60vh] border border-slate-800 rounded-lg bg-slate-900"
+                />
+              )}
+
+              {/* Video Preview */}
+              {['mp4', 'webm'].includes(selectedPreviewFile.extension) && previewUrl && (
+                <video controls src={previewUrl} className="max-w-full max-h-[60vh] rounded-lg shadow-md" />
+              )}
+
+              {/* Audio Preview */}
+              {['mp3', 'wav', 'ogg', 'm4a', 'flac'].includes(selectedPreviewFile.extension) && previewUrl && (
+                <audio controls src={previewUrl} className="w-full max-w-md" />
               )}
 
               {/* Unsupported File Preview */}
-              {!['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'pdf', 'txt', 'html', 'css', 'js', 'jsx', 'json', 'md', 'docx', 'doc'].includes(selectedPreviewFile.extension) && (
+              {!['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'pdf', 'txt', 'html', 'css', 'js', 'jsx', 'json', 'md', 'docx', 'doc', 'ppt', 'pptx', 'mp4', 'webm', 'mp3', 'wav', 'ogg', 'm4a', 'flac'].includes(selectedPreviewFile.extension) && (
                 <div className="flex flex-col items-center text-center max-w-sm py-10">
                   <div className="w-16 h-16 rounded-full bg-slate-900/60 border border-slate-800/80 flex items-center justify-center text-slate-500 mb-5 shadow-sm">
                     <svg className="w-8 h-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
@@ -248,9 +266,23 @@ export default function FilePreviewModal({
                     </svg>
                   </div>
                   <h4 className="text-sm font-bold text-white">Preview not available</h4>
-                  <p className="text-slate-400 text-xs mt-1.5 leading-relaxed">
-                    Nexora Drive does not support previews for <b>.{selectedPreviewFile.extension}</b> files. You can download the file to view it.
+                  <p className="text-slate-400 text-xs mt-1.5 leading-relaxed mb-5">
+                    Nexora Drive does not support in-app previews for <b>.{selectedPreviewFile.extension}</b> files. You can download the file to view it.
                   </p>
+                  {previewUrl && (
+                    <a
+                      href={previewUrl}
+                      download={selectedPreviewFile.name}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-2.5 px-5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl shadow-sm transition flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                      </svg>
+                      Download File
+                    </a>
+                  )}
                 </div>
               )}
             </>

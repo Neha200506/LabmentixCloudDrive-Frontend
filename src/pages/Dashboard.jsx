@@ -1,18 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import mammoth from 'mammoth';
 
 import {
   GridIcon,
   ListIcon,
-  SearchIcon,
-  CalendarIcon,
-  KeepIcon,
-  TasksIcon,
-  ContactsIcon,
-  PlusIcon
+  SearchIcon
 } from '../components/Icons';
 import { getFileIcon, formatSize } from '../utils/dashboardUtils';
-import FilePreviewModal from '../components/FilePreviewModal';
 
 import Sidebar from '../components/dashboard/Sidebar';
 import DashboardHeader from '../components/dashboard/DashboardHeader';
@@ -21,7 +15,43 @@ import FileGrid from '../components/dashboard/FileGrid';
 import HomeSection from '../components/dashboard/HomeSection';
 import TrashSection from '../components/dashboard/TrashSection';
 import StarredSection from '../components/dashboard/StarredSection';
-import ShareModal from '../components/dashboard/ShareModal';
+
+const FilePreviewModal = lazy(() => import('../components/FilePreviewModal'));
+const ShareModal = lazy(() => import('../components/dashboard/ShareModal'));
+const parseSizeInBytes = (sizeStr) => {
+  if (!sizeStr || sizeStr === '-' || sizeStr === '--') return 0;
+  const str = String(sizeStr).trim().toUpperCase();
+  const match = str.match(/^([\d.]+)\s*([A-Z]+)?$/);
+  if (!match) return 0;
+  const num = parseFloat(match[1]) || 0;
+  const unit = match[2] || 'B';
+  if (unit === 'KB' || unit === 'K') return num * 1024;
+  if (unit === 'MB' || unit === 'M') return num * 1024 * 1024;
+  if (unit === 'GB' || unit === 'G') return num * 1024 * 1024 * 1024;
+  if (unit === 'TB' || unit === 'T') return num * 1024 * 1024 * 1024 * 1024;
+  return num;
+};
+
+const sortItemsList = (itemsList, currentSortBy, currentSortOrder) => {
+  return [...itemsList].sort((a, b) => {
+    if (a.type === 'folder' && b.type !== 'folder') return -1;
+    if (a.type !== 'folder' && b.type === 'folder') return 1;
+
+    let res = 0;
+    if (currentSortBy === 'name') {
+      res = (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' });
+    } else if (currentSortBy === 'size') {
+      const sizeA = typeof a.sizeBytes === 'number' ? a.sizeBytes : parseSizeInBytes(a.size);
+      const sizeB = typeof b.sizeBytes === 'number' ? b.sizeBytes : parseSizeInBytes(b.size);
+      res = sizeA - sizeB;
+    } else if (currentSortBy === 'date' || currentSortBy === 'modified') {
+      const dateA = a._time || (a._time = new Date(a.createdAt || a.updatedAt || 0).getTime());
+      const dateB = b._time || (b._time = new Date(b.createdAt || b.updatedAt || 0).getTime());
+      res = dateA - dateB;
+    }
+    return currentSortOrder === 'desc' ? -res : res;
+  });
+};
 
 export default function Dashboard({ onNavigate, user }) {
   const displayUser = user || { email: '', full_name: 'Nexora User' };
@@ -41,7 +71,49 @@ export default function Dashboard({ onNavigate, user }) {
   const [activeTab, setActiveTab] = useState('drive'); // home, projects, drive, computers, shared, recent, starred, spam, trash, storage
   const [currentFolderId, setCurrentFolderId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState('asc');
+  const dataCacheRef = useRef(new Map());
+
+  const invalidateCache = () => {
+    dataCacheRef.current.clear();
+  };
+
+  const handleSortChange = (field) => {
+    if (sortBy === field) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+
   const userKey = displayUser.email || displayUser.id || 'default';
+  const [recentActivityMap, setRecentActivityMap] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`nexora_recent_activity_${userKey}`);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const trackItemActivity = (itemId, actionType = 'Opened') => {
+    if (!itemId) return;
+    const now = Date.now();
+    setRecentActivityMap(prev => {
+      const next = {
+        ...prev,
+        [itemId]: { lastAccessedAt: now, actionType }
+      };
+      try {
+        localStorage.setItem(`nexora_recent_activity_${userKey}`, JSON.stringify(next));
+      } catch (e) {
+        console.error(e);
+      }
+      return next;
+    });
+  };
   const [viewMode, setViewModeState] = useState(() => {
     return localStorage.getItem(`nexora_view_mode_${userKey}`) || 'list';
   });
@@ -101,6 +173,7 @@ export default function Dashboard({ onNavigate, user }) {
       }
 
       const uploadedFile = data.file;
+      const fileSizeNum = Number(uploadedFile.file_size) || parseSizeInBytes(formatSize(uploadedFile.file_size));
       const newFileItem = {
         id: uploadedFile.id,
         name: uploadedFile.file_name,
@@ -109,17 +182,20 @@ export default function Dashboard({ onNavigate, user }) {
         parentId: uploadedFile.folder_id,
         starred: false,
         inTrash: false,
-        createdAt: uploadedFile.created_at,
-        updatedAt: uploadedFile.created_at ? new Date(uploadedFile.created_at).toISOString().split('T')[0] : '2026-08-30',
+        createdAt: uploadedFile.created_at || new Date().toISOString(),
+        updatedAt: uploadedFile.created_at ? new Date(uploadedFile.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         owner: 'me',
-        size: formatSize(uploadedFile.file_size),
+        size: formatSize(uploadedFile.file_size || fileSizeNum),
+        sizeBytes: fileSizeNum,
         location: 'My Drive',
         reasonSuggested: 'Opened recently',
       };
 
       setItems((prev) => [newFileItem, ...prev]);
+      trackItemActivity(uploadedFile.id, 'Uploaded');
       showNotification("success", `"${file.name}" uploaded successfully!`);
-      await fetchDashboardData(false);
+      invalidateCache();
+      await fetchDashboardData(false, true);
     } catch (error) {
       showNotification("error", error.message);
     }
@@ -232,6 +308,7 @@ export default function Dashboard({ onNavigate, user }) {
         }
 
         const uploadedFile = data.file;
+        const fileSizeNum = Number(uploadedFile.file_size) || parseSizeInBytes(formatSize(uploadedFile.file_size));
         const newFileItem = {
           id: uploadedFile.id,
           name: uploadedFile.file_name,
@@ -240,10 +317,11 @@ export default function Dashboard({ onNavigate, user }) {
           parentId: uploadedFile.folder_id,
           starred: false,
           inTrash: false,
-          createdAt: uploadedFile.created_at,
-          updatedAt: uploadedFile.created_at ? new Date(uploadedFile.created_at).toISOString().split('T')[0] : '2026-08-30',
+          createdAt: uploadedFile.created_at || new Date().toISOString(),
+          updatedAt: uploadedFile.created_at ? new Date(uploadedFile.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
           owner: 'me',
-          size: formatSize(uploadedFile.file_size),
+          size: formatSize(uploadedFile.file_size || fileSizeNum),
+          sizeBytes: fileSizeNum,
           location: 'My Drive',
           reasonSuggested: 'Opened recently',
         };
@@ -257,12 +335,14 @@ export default function Dashboard({ onNavigate, user }) {
       showNotification("error", error.message);
     } finally {
       setIsLoading(false);
-      await fetchDashboardData(false);
+      invalidateCache();
+      await fetchDashboardData(false, true);
     }
   };
 
   const handlePreviewFile = async (file) => {
     if (!file) return;
+    trackItemActivity(file.id, 'Opened');
 
     setSelectedPreviewFile(file);
     setPreviewLoading(true);
@@ -272,15 +352,8 @@ export default function Dashboard({ onNavigate, user }) {
     setPreviewError('');
 
     const token = localStorage.getItem("token");
-    const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(file.extension);
-    const isPdf = file.extension === 'pdf';
     const isText = ['txt', 'html', 'css', 'js', 'jsx', 'json', 'md'].includes(file.extension);
     const isDocx = ['docx', 'doc'].includes(file.extension);
-
-    if (!isImage && !isPdf && !isText && !isDocx) {
-      setPreviewLoading(false);
-      return;
-    }
 
     try {
       const response = await fetch(`http://localhost:8080/api/files/${file.id}/url`, {
@@ -347,8 +420,17 @@ export default function Dashboard({ onNavigate, user }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const fetchDashboardData = async (showShimmer = true) => {
-    if (showShimmer) setIsLoading(true);
+  const fetchDashboardData = async (showShimmer = true, bypassCache = false) => {
+    const cacheKey = `${activeTab}:${currentFolderId || 'root'}`;
+    const cachedItems = dataCacheRef.current.get(cacheKey);
+
+    if (!bypassCache && cachedItems) {
+      setItems(cachedItems);
+      setIsLoading(false);
+    } else if (showShimmer) {
+      setIsLoading(true);
+    }
+
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -369,8 +451,6 @@ export default function Dashboard({ onNavigate, user }) {
       let filesUrl = 'http://localhost:8080/api/files?limit=1000';
       if (activeTab === 'trash') {
         filesUrl = 'http://localhost:8080/api/files/trash';
-      } else if (activeTab === 'drive') {
-        filesUrl = `http://localhost:8080/api/files?limit=1000&folder_id=${currentFolderId || 'root'}`;
       }
 
       const filesRes = await fetch(filesUrl, {
@@ -387,8 +467,8 @@ export default function Dashboard({ onNavigate, user }) {
         parentId: folder.parent_folder_id,
         starred: folder.is_starred || false,
         inTrash: activeTab === 'trash' || folder.deleted_at !== null,
-        createdAt: folder.created_at,
-        updatedAt: folder.created_at ? new Date(folder.created_at).toISOString().split('T')[0] : '2026-08-30',
+        createdAt: folder.created_at || new Date().toISOString(),
+        updatedAt: folder.created_at ? new Date(folder.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       }));
 
       // Format files
@@ -400,22 +480,32 @@ export default function Dashboard({ onNavigate, user }) {
         parentId: file.folder_id,
         starred: file.is_starred || false,
         inTrash: activeTab === 'trash' || file.deleted_at !== null,
-        createdAt: file.created_at,
-        updatedAt: file.created_at ? new Date(file.created_at).toISOString().split('T')[0] : '2026-08-30',
+        createdAt: file.created_at || new Date().toISOString(),
+        updatedAt: file.created_at ? new Date(file.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         owner: file.is_shared ? (file.owner_name || 'Owner') : 'me',
         shared: Boolean(file.is_shared),
         shared_permission: file.shared_permission,
         permission: file.shared_permission || 'owner',
         size: formatSize(file.file_size),
+        sizeBytes: Number(file.file_size) || 0,
         location: activeTab === 'trash' ? 'Trash' : 'My Drive',
         reasonSuggested: 'Opened recently',
       }));
 
-      setItems([...formattedFolders, ...formattedFiles]);
+      const fetchedItems = [...formattedFolders, ...formattedFiles];
+      dataCacheRef.current.set(cacheKey, fetchedItems);
+
+      const currentKey = `${activeTab}:${currentFolderId || 'root'}`;
+      if (cacheKey === currentKey) {
+        setItems(fetchedItems);
+      }
     } catch (error) {
       console.error('Fetch dashboard data error:', error);
     } finally {
-      if (showShimmer) setIsLoading(false);
+      const currentKey = `${activeTab}:${currentFolderId || 'root'}`;
+      if (cacheKey === currentKey) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -497,7 +587,8 @@ export default function Dashboard({ onNavigate, user }) {
         throw new Error(data.message || 'Failed to rename folder');
       }
 
-      await fetchDashboardData();
+      invalidateCache();
+      await fetchDashboardData(false, true);
     } catch (error) {
       alert(error.message);
     }
@@ -520,7 +611,8 @@ export default function Dashboard({ onNavigate, user }) {
         throw new Error(data.message || 'Failed to delete folder');
       }
 
-      await fetchDashboardData();
+      invalidateCache();
+      await fetchDashboardData(false, true);
     } catch (error) {
       alert(error.message);
     }
@@ -553,7 +645,8 @@ export default function Dashboard({ onNavigate, user }) {
         throw new Error(data.message || 'Failed to rename file');
       }
 
-      await fetchDashboardData();
+      invalidateCache();
+      await fetchDashboardData(false, true);
     } catch (error) {
       alert(error.message);
     }
@@ -583,7 +676,8 @@ export default function Dashboard({ onNavigate, user }) {
         throw new Error(data.message || 'Failed to delete file');
       }
 
-      await fetchDashboardData();
+      invalidateCache();
+      await fetchDashboardData(false, true);
     } catch (error) {
       alert(error.message);
     }
@@ -670,6 +764,7 @@ export default function Dashboard({ onNavigate, user }) {
   const handleFolderClick = (folderId) => {
     setIsLoading(true);
     setCurrentFolderId(folderId);
+    trackItemActivity(folderId, 'Opened');
     setActiveTab('drive'); // Always switch to My Drive view when exploring folders
     setSearchQuery('');
     setActiveFilterDropdown(null);
@@ -681,6 +776,8 @@ export default function Dashboard({ onNavigate, user }) {
     e.stopPropagation();
     const item = items.find(i => i.id === itemId);
     if (!item) return;
+
+    trackItemActivity(itemId, 'Starred');
 
     setItems(prevItems =>
       prevItems.map(i =>
@@ -701,7 +798,8 @@ export default function Dashboard({ onNavigate, user }) {
       if (!response.ok) {
         throw new Error(data.message || 'Failed to toggle star');
       }
-      await fetchDashboardData(false);
+      invalidateCache();
+      await fetchDashboardData(false, true);
     } catch (error) {
       showNotification("error", error.message);
       setItems(prevItems =>
@@ -732,7 +830,8 @@ export default function Dashboard({ onNavigate, user }) {
         throw new Error(data.message || 'Failed to restore item');
       }
       showNotification("success", `${item.type === 'folder' ? 'Folder' : 'File'} restored successfully.`);
-      await fetchDashboardData();
+      invalidateCache();
+      await fetchDashboardData(false, true);
     } catch (error) {
       showNotification("error", error.message);
     }
@@ -761,7 +860,8 @@ export default function Dashboard({ onNavigate, user }) {
         throw new Error(data.message || 'Failed to permanently delete item');
       }
       showNotification("success", `${item.type === 'folder' ? 'Folder' : 'File'} permanently deleted.`);
-      await fetchDashboardData();
+      invalidateCache();
+      await fetchDashboardData(false, true);
     } catch (error) {
       showNotification("error", error.message);
     }
@@ -769,6 +869,7 @@ export default function Dashboard({ onNavigate, user }) {
 
   const handleEmptyTrash = () => {
     if (confirm("Empty trash? All items in the trash will be permanently deleted.")) {
+      invalidateCache();
       setItems(prev => prev.filter(item => !item.inTrash));
     }
   };
@@ -796,36 +897,63 @@ export default function Dashboard({ onNavigate, user }) {
     return crumbs.concat(path);
   };
 
-  // Filter Items based on sidebar tab & active folder & local filters
-  const getFilteredItems = () => {
+  const filteredItems = useMemo(() => {
     let baseItems = [];
-    const activeItems = items.filter(item => !item.inTrash);
+    const activeItems = items.map(item => {
+      const activity = recentActivityMap[item.id];
+      return {
+        ...item,
+        lastAccessedAt: activity?.lastAccessedAt || new Date(item.createdAt || item.updatedAt || 0).getTime(),
+        lastActionType: activity?.actionType || 'Modified',
+      };
+    }).filter(item => !item.inTrash);
+
+    const isFilterActive = filterType !== 'all' || filterOwner !== 'all' || (filterModified !== 'all' && filterModified !== 'anytime') || searchQuery.trim() !== '';
 
     if (activeTab === 'trash') {
       baseItems = items.filter(item => item.inTrash === true);
     } else if (activeTab === 'drive') {
-      baseItems = activeItems.filter(item => item.parentId === currentFolderId);
+      if (isFilterActive) {
+        if (currentFolderId === null) {
+          // At My Drive root: filter across ALL accessible items globally
+          baseItems = activeItems;
+        } else {
+          // Inside a folder: filter across all items in this folder's subtree
+          const subtreeFolderIds = new Set([currentFolderId]);
+          let addedNew = true;
+          while (addedNew) {
+            addedNew = false;
+            for (const item of activeItems) {
+              if (item.type === 'folder' && item.parentId && subtreeFolderIds.has(item.parentId) && !subtreeFolderIds.has(item.id)) {
+                subtreeFolderIds.add(item.id);
+                addedNew = true;
+              }
+            }
+          }
+          baseItems = activeItems.filter(item => item.parentId && subtreeFolderIds.has(item.parentId));
+        }
+      } else {
+        baseItems = activeItems.filter(item => (item.parentId || null) === (currentFolderId || null));
+      }
     } else if (activeTab === 'home') {
-      baseItems = activeItems.filter(item => item.type === 'file');
+      baseItems = activeItems;
     } else if (activeTab === 'recent') {
-      baseItems = activeItems.filter(item => item.type === 'file');
+      const hasTracked = Object.keys(recentActivityMap).length > 0;
+      baseItems = activeItems
+        .filter(item => hasTracked ? Boolean(recentActivityMap[item.id]?.lastAccessedAt) : true)
+        .sort((a, b) => (b.lastAccessedAt || 0) - (a.lastAccessedAt || 0));
     } else if (activeTab === 'starred') {
       baseItems = activeItems.filter(item => item.starred);
     } else if (activeTab === 'shared') {
       baseItems = activeItems.filter(item => item.shared);
-    } else if (activeTab === 'computers') {
-      baseItems = [];
-    } else if (activeTab === 'spam') {
+    } else if (activeTab === 'computers' || activeTab === 'spam' || activeTab === 'projects') {
       baseItems = [];
     } else if (activeTab === 'storage') {
       baseItems = activeItems;
-    } else if (activeTab === 'projects') {
-      baseItems = [];
     }
 
     // Apply interactive filter criteria
-    if (['drive', 'shared', 'recent', 'starred', 'trash'].includes(activeTab)) {
-      // 1. Filter by Type
+    if (['drive', 'shared', 'recent', 'starred', 'trash', 'home', 'storage'].includes(activeTab)) {
       if (filterType !== 'all') {
         if (filterType === 'folder') {
           baseItems = baseItems.filter(item => item.type === 'folder');
@@ -850,7 +978,6 @@ export default function Dashboard({ onNavigate, user }) {
         }
       }
 
-      // 2. Filter by Owner
       if (filterOwner !== 'all') {
         if (filterOwner === 'link') {
           baseItems = baseItems.filter(item => item.shared === true);
@@ -859,56 +986,100 @@ export default function Dashboard({ onNavigate, user }) {
         }
       }
 
-      // 3. Filter by Modified
-      if (filterModified !== 'all') {
-        if (filterModified === 'today') {
-          baseItems = baseItems.filter(item => item.updatedAt === '2026-08-29' || item.updatedAt === '2026-08-28');
-        } else if (filterModified === '7days') {
-          baseItems = baseItems.filter(item => {
-            const date = new Date(item.updatedAt);
-            const refDate = new Date('2026-08-29');
-            const diffTime = Math.abs(refDate - date);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return diffDays <= 7;
-          });
-        } else if (filterModified === '30days') {
-          baseItems = baseItems.filter(item => {
-            const date = new Date(item.updatedAt);
-            const refDate = new Date('2026-08-29');
-            const diffTime = Math.abs(refDate - date);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return diffDays <= 30;
-          });
-        }
-      }
+      if (filterModified !== 'all' && filterModified !== 'anytime') {
+        const now = new Date();
+        const nowTime = now.getTime();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
-      // 4. Filter by Source
-      if (filterSource !== 'all') {
-        if (filterSource === 'gmail') {
-          baseItems = baseItems.filter(item => item.id === '2'); // mock gmail item
-        } else if (filterSource === 'meet') {
-          baseItems = [];
-        }
+        baseItems = baseItems.filter(item => {
+          const rawDate = item.createdAt || item.updatedAt;
+          if (!rawDate) return false;
+          const itemTime = new Date(rawDate).getTime();
+          if (isNaN(itemTime) || itemTime === 0) return false;
+
+          if (filterModified === 'today') {
+            return itemTime >= startOfToday || (nowTime - itemTime <= 24 * 60 * 60 * 1000);
+          } else if (filterModified === '7days') {
+            return (nowTime - itemTime) <= 7 * 24 * 60 * 60 * 1000;
+          } else if (filterModified === '30days') {
+            return (nowTime - itemTime) <= 30 * 24 * 60 * 60 * 1000;
+          } else if (filterModified === 'thisyear') {
+            return new Date(itemTime).getFullYear() === now.getFullYear();
+          } else if (filterModified === 'lastyear') {
+            return new Date(itemTime).getFullYear() === (now.getFullYear() - 1);
+          } else if (filterModified === 'custom') {
+            let matches = true;
+            if (customStart) {
+              const startT = new Date(customStart).getTime();
+              if (!isNaN(startT) && itemTime < startT) matches = false;
+            }
+            if (customEnd) {
+              const endT = new Date(customEnd).setHours(23, 59, 59, 999);
+              if (!isNaN(endT) && itemTime > endT) matches = false;
+            }
+            return matches;
+          }
+          return true;
+        });
       }
     }
 
-    // Filter by search query
+    let resultItems = baseItems;
     if (searchQuery.trim() !== '') {
       const query = searchQuery.toLowerCase();
-      if (activeTab === 'drive') {
-        return activeItems.filter(item => item.name.toLowerCase().includes(query));
-      }
-      return baseItems.filter(item => item.name.toLowerCase().includes(query));
+      resultItems = baseItems.filter(item => item.name.toLowerCase().includes(query));
     }
 
-    return baseItems;
-  };
+    if (activeTab === 'recent' && sortBy === 'name') {
+      return resultItems;
+    }
+    return sortItemsList(resultItems, sortBy, sortOrder);
+  }, [items, activeTab, currentFolderId, filterType, filterOwner, filterModified, customStart, customEnd, searchQuery, sortBy, sortOrder, recentActivityMap]);
 
-  const filteredItems = getFilteredItems();
   const breadcrumbs = buildBreadcrumbs();
 
-  const folderItems = filteredItems.filter(item => item.type === 'folder');
-  const fileItems = filteredItems.filter(item => item.type === 'file');
+  const folderItems = useMemo(() => filteredItems.filter(item => item.type === 'folder'), [filteredItems]);
+  const fileItems = useMemo(() => filteredItems.filter(item => item.type === 'file'), [filteredItems]);
+
+  // Dynamic storage calculations based on actual user files
+  const activeFilesForStorage = useMemo(() => items.filter(item => !item.inTrash && item.type === 'file'), [items]);
+
+  const totalUsedStorageBytes = useMemo(() => {
+    return activeFilesForStorage.reduce((acc, f) => {
+      const bytes = (typeof f.sizeBytes === 'number' && !isNaN(f.sizeBytes) && f.sizeBytes > 0) ? f.sizeBytes : parseSizeInBytes(f.size);
+      return acc + bytes;
+    }, 0);
+  }, [activeFilesForStorage]);
+
+  const totalStorageCapacityBytes = 15 * 1024 * 1024 * 1024; // 15 GB
+
+  const usedPercentStr = useMemo(() => {
+    if (totalUsedStorageBytes <= 0) return '0';
+    const pct = (totalUsedStorageBytes / totalStorageCapacityBytes) * 100;
+    return pct < 0.1 ? '< 0.1' : pct.toFixed(1);
+  }, [totalUsedStorageBytes, totalStorageCapacityBytes]);
+
+  const storageCategories = useMemo(() => {
+    const cats = [
+      { id: 'docs', label: 'Documents & PDFs', exts: ['pdf', 'docx', 'doc', 'txt', 'md', 'rtf'], color: 'bg-indigo-500', bytes: 0 },
+      { id: 'sheets', label: 'Spreadsheets', exts: ['xlsx', 'xls', 'csv'], color: 'bg-emerald-500', bytes: 0 },
+      { id: 'media', label: 'Audio & Media', exts: ['mp3', 'wav', 'ogg', 'm4a', 'flac', 'mp4', 'mkv', 'avi', 'mov', 'webm'], color: 'bg-purple-500', bytes: 0 },
+      { id: 'backups', label: 'System Backups', exts: ['zip', 'tar', 'gz', 'rar', '7z', 'bak', 'iso'], color: 'bg-amber-500', bytes: 0 },
+    ];
+
+    activeFilesForStorage.forEach(file => {
+      const ext = (file.extension || '').toLowerCase();
+      const bytes = (typeof file.sizeBytes === 'number' && !isNaN(file.sizeBytes) && file.sizeBytes > 0) ? file.sizeBytes : parseSizeInBytes(file.size);
+      const matched = cats.find(c => c.exts.includes(ext));
+      if (matched) {
+        matched.bytes += bytes;
+      } else {
+        cats[0].bytes += bytes;
+      }
+    });
+
+    return cats;
+  }, [activeFilesForStorage]);
 
   // People dropdown lists search filter
   const peopleOptions = [
@@ -944,7 +1115,11 @@ export default function Dashboard({ onNavigate, user }) {
         throw new Error(data.message || "Failed to create folder");
       }
 
-      await fetchDashboardData();
+      if (data.folder?.id) {
+        trackItemActivity(data.folder.id, 'Created');
+      }
+      invalidateCache();
+      await fetchDashboardData(false, true);
     } catch (error) {
       alert(error.message);
     }
@@ -968,7 +1143,9 @@ export default function Dashboard({ onNavigate, user }) {
       showNotification("success", "File content saved successfully");
       setPreviewTextContent(newContent);
       setPreviewDocxHtml(`<div className="whitespace-pre-wrap font-sans text-sm">${newContent}</div>`);
-      fetchDashboardData();
+      trackItemActivity(fileId, 'Modified');
+      invalidateCache();
+      fetchDashboardData(false, true);
     } catch (err) {
       showNotification("error", err.message);
       throw err;
@@ -1339,36 +1516,40 @@ export default function Dashboard({ onNavigate, user }) {
                   )}
                 </div>
 
-                {/* 4. Source Dropdown */}
+                {/* 5. Sort Dropdown */}
                 <div className="relative">
                   <button
-                    onClick={() => setActiveFilterDropdown(activeFilterDropdown === 'source' ? null : 'source')}
-                    className={`px-3 py-1 border text-xs rounded-lg flex items-center gap-1.5 transition ${filterSource !== 'all'
+                    onClick={() => setActiveFilterDropdown(activeFilterDropdown === 'sort' ? null : 'sort')}
+                    className={`px-3 py-1 border text-xs rounded-lg flex items-center gap-1.5 transition ${sortBy !== 'name' || sortOrder !== 'asc'
                       ? 'border-indigo-800 bg-indigo-950/50 text-indigo-300 font-semibold'
                       : 'border-slate-800 bg-slate-900/35 text-slate-300 hover:bg-slate-850 hover:text-white'
                       }`}
                   >
-                    <span>Source{filterSource !== 'all' ? `: ${filterSource.toUpperCase()}` : ''}</span>
+                    <span>Sort: {sortBy === 'name' ? 'Name' : sortBy === 'size' ? 'Size' : 'Date'} ({sortOrder.toUpperCase()})</span>
                     <svg className="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
-                  {activeFilterDropdown === 'source' && (
+                  {activeFilterDropdown === 'sort' && (
                     <>
                       <div className="fixed inset-0 z-30" onClick={() => setActiveFilterDropdown(null)} />
-                      <div className="absolute left-0 mt-1.5 w-40 rounded-xl bg-slate-900 border border-slate-800 py-1.5 shadow-xl z-40 text-xs">
+                      <div className="absolute left-0 mt-1.5 w-44 rounded-xl bg-slate-900 border border-slate-800 py-1.5 shadow-xl z-40 text-xs">
                         {[
-                          { id: 'all', label: 'All sources' },
-                          { id: 'gmail', label: 'Gmail' },
-                          { id: 'meet', label: 'Meet' },
+                          { id: 'name-asc', label: 'Name (A to Z)', sortBy: 'name', sortOrder: 'asc' },
+                          { id: 'name-desc', label: 'Name (Z to A)', sortBy: 'name', sortOrder: 'desc' },
+                          { id: 'date-desc', label: 'Newest first', sortBy: 'date', sortOrder: 'desc' },
+                          { id: 'date-asc', label: 'Oldest first', sortBy: 'date', sortOrder: 'asc' },
+                          { id: 'size-desc', label: 'Size (Large to Small)', sortBy: 'size', sortOrder: 'desc' },
+                          { id: 'size-asc', label: 'Size (Small to Large)', sortBy: 'size', sortOrder: 'asc' },
                         ].map(opt => (
                           <button
                             key={opt.id}
                             onClick={() => {
-                              setFilterSource(opt.id);
+                              setSortBy(opt.sortBy);
+                              setSortOrder(opt.sortOrder);
                               setActiveFilterDropdown(null);
                             }}
-                            className={`w-full text-left px-4 py-2 hover:bg-slate-800/60 transition ${filterSource === opt.id ? 'font-semibold text-indigo-400 bg-indigo-500/10' : 'text-slate-300'}`}
+                            className={`w-full text-left px-3.5 py-2 hover:bg-slate-800/60 transition ${sortBy === opt.sortBy && sortOrder === opt.sortOrder ? 'font-semibold text-indigo-400 bg-indigo-500/10' : 'text-slate-300'}`}
                           >
                             {opt.label}
                           </button>
@@ -1379,9 +1560,13 @@ export default function Dashboard({ onNavigate, user }) {
                 </div>
 
                 {/* Reset Filters options link */}
-                {(filterType !== 'all' || filterOwner !== 'all' || filterModified !== 'all' || filterSource !== 'all') && (
+                {(filterType !== 'all' || filterOwner !== 'all' || filterModified !== 'all' || filterSource !== 'all' || sortBy !== 'name' || sortOrder !== 'asc') && (
                   <button
-                    onClick={resetFilters}
+                    onClick={() => {
+                      resetFilters();
+                      setSortBy('name');
+                      setSortOrder('asc');
+                    }}
                     className="text-xs text-indigo-400 hover:text-indigo-300 hover:underline font-semibold ml-2"
                   >
                     Reset filters
@@ -1523,6 +1708,9 @@ export default function Dashboard({ onNavigate, user }) {
                               onRenameFile={handleRenameFilePrompt}
                               onDeleteFile={handleDeleteFile}
                               onShareFile={setSelectedShareFile}
+                              sortBy={sortBy}
+                              sortOrder={sortOrder}
+                              onSort={handleSortChange}
                             />
                           ) : (
                             <FileGrid
@@ -1545,7 +1733,7 @@ export default function Dashboard({ onNavigate, user }) {
                       ========================================== */}
                   {activeTab === 'home' && (
                     <HomeSection
-                      items={items}
+                      items={filteredItems}
                       onPreviewFile={handlePreviewFile}
                       onToggleStar={handleToggleStar}
                       onShareFile={setSelectedShareFile}
@@ -1588,6 +1776,9 @@ export default function Dashboard({ onNavigate, user }) {
                           activeTab="shared"
                           onPreviewFile={handlePreviewFile}
                           onShareFile={setSelectedShareFile}
+                          sortBy={sortBy}
+                          sortOrder={sortOrder}
+                          onSort={handleSortChange}
                         />
                       ) : (
                         <FileGrid
@@ -1611,6 +1802,9 @@ export default function Dashboard({ onNavigate, user }) {
                           activeTab="recent"
                           onPreviewFile={handlePreviewFile}
                           onShareFile={setSelectedShareFile}
+                          sortBy={sortBy}
+                          sortOrder={sortOrder}
+                          onSort={handleSortChange}
                         />
                       ) : (
                         <FileGrid
@@ -1634,6 +1828,9 @@ export default function Dashboard({ onNavigate, user }) {
                       onToggleStar={handleToggleStar}
                       onPreviewFile={handlePreviewFile}
                       onShareFile={setSelectedShareFile}
+                      sortBy={sortBy}
+                      sortOrder={sortOrder}
+                      onSort={handleSortChange}
                     />
                   )}
 
@@ -1662,6 +1859,9 @@ export default function Dashboard({ onNavigate, user }) {
                       items={filteredItems}
                       onRestoreItem={handleRestoreItem}
                       onDeletePermanent={handleDeletePermanent}
+                      sortBy={sortBy}
+                      sortOrder={sortOrder}
+                      onSort={handleSortChange}
                     />
                   )}
 
@@ -1675,21 +1875,32 @@ export default function Dashboard({ onNavigate, user }) {
                       <div className="bg-slate-900/20 border border-slate-850 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div className="space-y-2.5 flex-1">
                           <h3 className="text-sm font-semibold text-slate-200">Nexora Cloud Storage Usage</h3>
-                          <div className="text-3xl font-extrabold text-indigo-400">1.2 GB <span className="text-sm font-semibold text-slate-500">of 15 GB used (8%)</span></div>
+                          <div className="text-3xl font-extrabold text-indigo-400">
+                            {formatSize(totalUsedStorageBytes)} <span className="text-sm font-semibold text-slate-500">of 15 GB used ({usedPercentStr}%)</span>
+                          </div>
 
                           {/* Segmented storage progress bar */}
                           <div className="w-full bg-slate-950 border border-slate-850 rounded-full h-3 overflow-hidden flex">
-                            <div className="bg-indigo-500 h-full" style={{ width: '4%' }} title="PDFs: 4.5 MB" />
-                            <div className="bg-emerald-500 h-full" style={{ width: '2.5%' }} title="Spreadsheets: 3.2 MB" />
-                            <div className="bg-purple-500 h-full" style={{ width: '1.2%' }} title="Audio: 6.4 MB" />
-                            <div className="bg-amber-500 h-full" style={{ width: '0.3%' }} title="Archives: 142 MB" />
+                            {storageCategories.map(cat => {
+                              if (cat.bytes <= 0) return null;
+                              const pct = Math.max((cat.bytes / totalStorageCapacityBytes) * 100, 0.8);
+                              return (
+                                <div
+                                  key={cat.id}
+                                  className={`${cat.color} h-full transition-all duration-300`}
+                                  style={{ width: `${pct}%` }}
+                                  title={`${cat.label}: ${formatSize(cat.bytes)}`}
+                                />
+                              );
+                            })}
                           </div>
 
                           <div className="flex flex-wrap items-center gap-4 text-[10px] text-slate-500 font-medium pt-1">
-                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-indigo-500" /> Documents & PDFs (4.5 MB)</span>
-                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Spreadsheets (3.2 MB)</span>
-                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-purple-500" /> Audio & Media (6.4 MB)</span>
-                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> System Backups (142 MB)</span>
+                            {storageCategories.map(cat => (
+                              <span key={cat.id} className="flex items-center gap-1.5">
+                                <span className={`w-2.5 h-2.5 rounded-full ${cat.color}`} /> {cat.label} ({formatSize(cat.bytes)})
+                              </span>
+                            ))}
                           </div>
                         </div>
 
@@ -1720,40 +1931,40 @@ export default function Dashboard({ onNavigate, user }) {
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-850/60">
-                              {items.filter(item => !item.inTrash && item.type === 'file')
-                                .sort((a, b) => {
-                                  const parseSize = (sizeStr) => {
-                                    const val = parseFloat(sizeStr);
-                                    if (sizeStr.includes('MB')) return val * 1024;
-                                    if (sizeStr.includes('KB')) return val;
-                                    return val;
-                                  };
-                                  return parseSize(b.size) - parseSize(a.size);
-                                })
-                                .map(file => (
-                                  <tr key={file.id} className="hover:bg-slate-800/35 text-slate-350 hover:text-white transition">
-                                    <td className="py-3 px-4 font-medium">
-                                      <div className="flex items-center gap-2.5 min-w-0">
-                                        <span className="shrink-0">{getFileIcon(file.extension)}</span>
-                                        <span
-                                          className="truncate cursor-pointer hover:text-indigo-400 transition"
-                                          title={file.name}
-                                          onClick={() => handlePreviewFile(file)}
-                                        >
-                                          {file.name}
-                                        </span>
-                                      </div>
-                                    </td>
-                                    <td className="py-3 px-4 text-slate-500">{file.location || 'My Drive'}</td>
-                                    <td className="py-3 px-4 font-semibold text-slate-400">{file.size}</td>
-                                  </tr>
-                                ))
-                              }
+                              {activeFilesForStorage.length === 0 ? (
+                                <tr>
+                                  <td colSpan="3" className="py-6 text-center text-slate-500 italic">No files in your drive</td>
+                                </tr>
+                              ) : (
+                                [...activeFilesForStorage]
+                                  .sort((a, b) => {
+                                    const sizeA = typeof a.sizeBytes === 'number' && !isNaN(a.sizeBytes) && a.sizeBytes > 0 ? a.sizeBytes : parseSizeInBytes(a.size);
+                                    const sizeB = typeof b.sizeBytes === 'number' && !isNaN(b.sizeBytes) && b.sizeBytes > 0 ? b.sizeBytes : parseSizeInBytes(b.size);
+                                    return sizeB - sizeA;
+                                  })
+                                  .map(file => (
+                                    <tr key={file.id} className="hover:bg-slate-800/35 text-slate-350 hover:text-white transition">
+                                      <td className="py-3 px-4 font-medium">
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                          <span className="shrink-0">{getFileIcon(file.extension)}</span>
+                                          <span
+                                            className="truncate cursor-pointer hover:text-indigo-400 transition"
+                                            title={file.name}
+                                            onClick={() => handlePreviewFile(file)}
+                                          >
+                                            {file.name}
+                                          </span>
+                                        </div>
+                                      </td>
+                                      <td className="py-3 px-4 text-slate-500">{file.location || 'My Drive'}</td>
+                                      <td className="py-3 px-4 font-semibold text-slate-400">{file.size}</td>
+                                    </tr>
+                                  ))
+                              )}
                             </tbody>
                           </table>
                         </div>
                       </div>
-
                     </div>
                   )}
 
@@ -1763,43 +1974,18 @@ export default function Dashboard({ onNavigate, user }) {
             </div>
           </div>
 
-          {/* ==========================================
-              RIGHT UTILITY RAIL (Google Workspace-style)
-              ========================================== */}
-          <aside className="w-12 bg-transparent flex flex-col items-center py-4 border-l border-slate-900/60 gap-6 z-10 shrink-0">
-            <button className="p-2 rounded-full hover:bg-slate-900 transition active:scale-[0.98]" title="Calendar">
-              <CalendarIcon />
-            </button>
-            <button className="p-2 rounded-full hover:bg-slate-900 transition active:scale-[0.98]" title="Keep">
-              <KeepIcon />
-            </button>
-            <button className="p-2 rounded-full hover:bg-slate-900 transition active:scale-[0.98]" title="Tasks">
-              <TasksIcon />
-            </button>
-            <button className="p-2 rounded-full hover:bg-slate-900 transition active:scale-[0.98]" title="Contacts">
-              <ContactsIcon />
-            </button>
-
-            <div className="w-6 border-b border-slate-800/60 my-1" />
-
-            <button className="p-2 rounded-full border border-slate-800 hover:bg-slate-900 transition active:scale-[0.98]" title="Get Add-ons">
-              <PlusIcon />
-            </button>
-          </aside>
-
         </div>
       </main>
 
       {/* Toast Notifications */}
       {notification && (
-        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl border shadow-lg text-xs font-semibold flex items-center gap-2 animate-in slide-in-from-top-2 duration-200 ${
-          notification.type === 'success' 
-            ? 'bg-emerald-950/90 border-emerald-800 text-emerald-300' 
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl border shadow-lg text-xs font-semibold flex items-center gap-2 animate-in slide-in-from-top-2 duration-200 ${notification.type === 'success'
+            ? 'bg-emerald-950/90 border-emerald-800 text-emerald-300'
             : 'bg-rose-950/90 border-rose-800 text-rose-300'
-        }`}>
+          }`}>
           <span>{notification.type === 'success' ? '✓' : '✕'}</span>
           <span>{notification.message}</span>
-          <button 
+          <button
             onClick={() => setNotification(null)}
             className="ml-2 text-slate-400 hover:text-white"
           >
@@ -1811,25 +1997,29 @@ export default function Dashboard({ onNavigate, user }) {
       )}
 
       {/* FILE PREVIEW MODAL */}
-      <FilePreviewModal
-        selectedPreviewFile={selectedPreviewFile}
-        previewLoading={previewLoading}
-        previewUrl={previewUrl}
-        previewTextContent={previewTextContent}
-        previewDocxHtml={previewDocxHtml}
-        previewError={previewError}
-        onClose={() => setSelectedPreviewFile(null)}
-        getFileIcon={getFileIcon}
-        onSaveContent={handleSaveFileContent}
-      />
+      <Suspense fallback={null}>
+        <FilePreviewModal
+          selectedPreviewFile={selectedPreviewFile}
+          previewLoading={previewLoading}
+          previewUrl={previewUrl}
+          previewTextContent={previewTextContent}
+          previewDocxHtml={previewDocxHtml}
+          previewError={previewError}
+          onClose={() => setSelectedPreviewFile(null)}
+          getFileIcon={getFileIcon}
+          onSaveContent={handleSaveFileContent}
+        />
+      </Suspense>
 
       {/* SHARE MODAL */}
       {selectedShareFile && (
-        <ShareModal
-          file={selectedShareFile}
-          onClose={() => setSelectedShareFile(null)}
-          showNotification={showNotification}
-        />
+        <Suspense fallback={null}>
+          <ShareModal
+            file={selectedShareFile}
+            onClose={() => setSelectedShareFile(null)}
+            showNotification={showNotification}
+          />
+        </Suspense>
       )}
     </div>
   );

@@ -13,16 +13,30 @@ export default function FileList({
   onRestoreItem,
   onDeletePermanent,
   onShareFile,
+  sortBy,
+  sortOrder,
+  onSort,
 }) {
+  const renderSortIndicator = (field) => {
+    if (sortBy !== field) return null;
+    return <span className="ml-1 text-indigo-400 font-bold">{sortOrder === 'asc' ? '↑' : '↓'}</span>;
+  };
+
   if (activeTab === 'trash') {
     return (
       <div className="border border-slate-800/60 rounded-xl overflow-hidden shadow-xs bg-slate-900/10">
         <table className="min-w-full border-collapse text-left text-xs">
           <thead>
             <tr className="bg-slate-900/40 border-b border-slate-800/80 text-slate-400 font-semibold select-none">
-              <th className="py-3 px-4 font-semibold">Name</th>
-              <th className="py-3 px-4 font-semibold">Date Deleted</th>
-              <th className="py-3 px-4 font-semibold w-24">Size</th>
+              <th onClick={() => onSort && onSort('name')} className="py-3 px-4 font-semibold cursor-pointer hover:text-indigo-400 transition">
+                Name{renderSortIndicator('name')}
+              </th>
+              <th onClick={() => onSort && onSort('date')} className="py-3 px-4 font-semibold cursor-pointer hover:text-indigo-400 transition">
+                Date Deleted{renderSortIndicator('date')}
+              </th>
+              <th onClick={() => onSort && onSort('size')} className="py-3 px-4 font-semibold w-24 cursor-pointer hover:text-indigo-400 transition">
+                Size{renderSortIndicator('size')}
+              </th>
               <th className="py-3 px-4 w-28 text-right">Actions</th>
             </tr>
           </thead>
@@ -79,10 +93,16 @@ export default function FileList({
         <table className="min-w-full border-collapse text-left text-xs">
           <thead>
             <tr className="bg-slate-900/40 border-b border-slate-800/80 text-slate-400 font-semibold select-none">
-              <th className="py-3 px-4 font-semibold w-1/3">Name</th>
+              <th onClick={() => onSort && onSort('name')} className="py-3 px-4 font-semibold w-1/3 cursor-pointer hover:text-indigo-400 transition">
+                Name{renderSortIndicator('name')}
+              </th>
               <th className="py-3 px-4 font-semibold">Shared by</th>
-              <th className="py-3 px-4 font-semibold">Share Date</th>
-              <th className="py-3 px-4 font-semibold w-24">Size</th>
+              <th onClick={() => onSort && onSort('date')} className="py-3 px-4 font-semibold cursor-pointer hover:text-indigo-400 transition">
+                Share Date{renderSortIndicator('date')}
+              </th>
+              <th onClick={() => onSort && onSort('size')} className="py-3 px-4 font-semibold w-24 cursor-pointer hover:text-indigo-400 transition">
+                Size{renderSortIndicator('size')}
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-850/60">
@@ -124,10 +144,16 @@ export default function FileList({
         <table className="min-w-full border-collapse text-left text-xs">
           <thead>
             <tr className="bg-slate-900/40 border-b border-slate-800/80 text-slate-400 font-semibold select-none">
-              <th className="py-3 px-4 font-semibold">Name</th>
+              <th onClick={() => onSort && onSort('name')} className="py-3 px-4 font-semibold cursor-pointer hover:text-indigo-400 transition">
+                Name{renderSortIndicator('name')}
+              </th>
               <th className="py-3 px-4 font-semibold">Activity</th>
-              <th className="py-3 px-4 font-semibold">Date modified</th>
-              <th className="py-3 px-4 font-semibold w-24">Size</th>
+              <th onClick={() => onSort && onSort('date')} className="py-3 px-4 font-semibold cursor-pointer hover:text-indigo-400 transition">
+                Date modified{renderSortIndicator('date')}
+              </th>
+              <th onClick={() => onSort && onSort('size')} className="py-3 px-4 font-semibold w-24 cursor-pointer hover:text-indigo-400 transition">
+                Size{renderSortIndicator('size')}
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-850/60">
@@ -162,9 +188,13 @@ export default function FileList({
         <table className="min-w-full border-collapse text-left text-xs">
           <thead>
             <tr className="bg-slate-900/40 border-b border-slate-800/80 text-slate-400 font-semibold select-none">
-              <th className="py-3 px-4 font-semibold">Name</th>
+              <th onClick={() => onSort && onSort('name')} className="py-3 px-4 font-semibold cursor-pointer hover:text-indigo-400 transition">
+                Name{renderSortIndicator('name')}
+              </th>
               <th className="py-3 px-4 font-semibold">Owner</th>
-              <th className="py-3 px-4 font-semibold">Modified</th>
+              <th onClick={() => onSort && onSort('date')} className="py-3 px-4 font-semibold cursor-pointer hover:text-indigo-400 transition">
+                Modified{renderSortIndicator('date')}
+              </th>
               <th className="py-3 px-4 w-12"></th>
             </tr>
           </thead>
@@ -221,7 +251,9 @@ export default function FileList({
       <table className="min-w-full border-collapse text-left text-xs">
         <thead>
           <tr className="bg-slate-900/40 border-b border-slate-800/80 text-slate-400 font-semibold select-none">
-            <th className="py-3 px-4 font-semibold w-1/3">Name</th>
+            <th onClick={() => onSort && onSort('name')} className="py-3 px-4 font-semibold w-1/3 cursor-pointer hover:text-indigo-400 transition">
+              Name{renderSortIndicator('name')}
+            </th>
             <th className="py-3 px-4 font-semibold w-1/4 hidden sm:table-cell">Reason suggested</th>
             <th className="py-3 px-4 font-semibold hidden md:table-cell">Owner</th>
             <th className="py-3 px-4 font-semibold hidden sm:table-cell">Location</th>

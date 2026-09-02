@@ -8,6 +8,9 @@ export default function StarredSection({
   onToggleStar,
   onPreviewFile,
   onShareFile,
+  sortBy,
+  sortOrder,
+  onSort,
 }) {
   return (
     <div className="space-y-6">
@@ -50,6 +53,9 @@ export default function StarredSection({
             onPreviewFile={onPreviewFile}
             onToggleStar={onToggleStar}
             onShareFile={onShareFile}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSort={onSort}
           />
         </div>
       )}
