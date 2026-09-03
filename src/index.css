@@ -1,14 +1,108 @@
 @import "tailwindcss";
 
-.docx-preview-content h1 { font-size: 1.5rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.75rem; margin-top: 1rem; }
-.docx-preview-content h2 { font-size: 1.25rem; font-weight: 700; color: #f1f5f9; margin-bottom: 0.5rem; margin-top: 0.75rem; }
-.docx-preview-content h3 { font-size: 1.1rem; font-weight: 600; color: #e2e8f0; margin-bottom: 0.5rem; margin-top: 0.75rem; }
-.docx-preview-content p { margin-bottom: 0.75rem; color: #cbd5e1; line-height: 1.6; }
-.docx-preview-content table { width: 100%; border-collapse: collapse; margin-top: 1rem; margin-bottom: 1rem; border: 1px solid #334155; }
-.docx-preview-content th, .docx-preview-content td { border: 1px solid #334155; padding: 8px 12px; text-align: left; }
-.docx-preview-content th { background-color: #1e293b; color: #f8fafc; font-weight: 600; }
-.docx-preview-content ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 0.75rem; }
-.docx-preview-content ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 0.75rem; }
-.docx-preview-content li { margin-bottom: 0.25rem; color: #cbd5e1; }
-.docx-preview-content strong { color: #f8fafc; font-weight: 600; }
-.docx-preview-content a { color: #818cf8; text-decoration: underline; }
+.docx-preview-content h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin-bottom: 0.75rem;
+  margin-top: 1rem;
+}
+
+.docx-preview-content h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-bottom: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.docx-preview-content h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin-bottom: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.docx-preview-content p {
+  margin-bottom: 0.75rem;
+  color: #cbd5e1;
+  line-height: 1.6;
+}
+
+.docx-preview-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #334155;
+}
+
+.docx-preview-content th,
+.docx-preview-content td {
+  border: 1px solid #334155;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.docx-preview-content th {
+  background-color: #1e293b;
+  color: #f8fafc;
+  font-weight: 600;
+}
+
+.docx-preview-content u {
+  text-decoration: underline !important;
+}
+
+.docx-preview-content ul {
+  list-style-type: disc !important;
+  padding-left: 1.5rem !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.docx-preview-content ol {
+  list-style-type: decimal !important;
+  padding-left: 1.5rem !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.docx-preview-content li {
+  display: list-item !important;
+  margin-bottom: 0.25rem;
+  color: #cbd5e1;
+}
+
+.docx-preview-content [align="left"],
+.docx-preview-content [style*="text-align: left"],
+.docx-preview-content [style*="text-align:left"] {
+  text-align: left !important;
+}
+
+.docx-preview-content [align="center"],
+.docx-preview-content [style*="text-align: center"],
+.docx-preview-content [style*="text-align:center"] {
+  text-align: center !important;
+}
+
+.docx-preview-content [align="right"],
+.docx-preview-content [style*="text-align: right"],
+.docx-preview-content [style*="text-align:right"] {
+  text-align: right !important;
+}
+
+.docx-preview-content [align="justify"],
+.docx-preview-content [style*="text-align: justify"],
+.docx-preview-content [style*="text-align:justify"] {
+  text-align: justify !important;
+}
+
+.docx-preview-content strong {
+  color: #f8fafc;
+  font-weight: 600;
+}
+
+.docx-preview-content a {
+  color: #818cf8;
+  text-decoration: underline;
+}

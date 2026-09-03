@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, useMemo, lazy } from 'react';
 import mammoth from 'mammoth';
 
 import {
@@ -15,9 +15,13 @@ import FileGrid from '../components/dashboard/FileGrid';
 import HomeSection from '../components/dashboard/HomeSection';
 import TrashSection from '../components/dashboard/TrashSection';
 import StarredSection from '../components/dashboard/StarredSection';
+import FilterBar from '../components/dashboard/FilterBar';
+import StorageSection from '../components/dashboard/StorageSection';
+import DashboardModals from '../components/dashboard/DashboardModals';
 
 const FilePreviewModal = lazy(() => import('../components/FilePreviewModal'));
 const ShareModal = lazy(() => import('../components/dashboard/ShareModal'));
+const VersionHistoryModal = lazy(() => import('../components/dashboard/VersionHistoryModal'));
 const parseSizeInBytes = (sizeStr) => {
   if (!sizeStr || sizeStr === '-' || sizeStr === '--') return 0;
   const str = String(sizeStr).trim().toUpperCase();
@@ -53,6 +57,7 @@ const sortItemsList = (itemsList, currentSortBy, currentSortOrder) => {
   });
 };
 
+
 export default function Dashboard({ onNavigate, user }) {
   const displayUser = user || { email: '', full_name: 'Nexora User' };
   const displayName = displayUser.full_name || displayUser.name || 'Nexora User';
@@ -68,6 +73,7 @@ export default function Dashboard({ onNavigate, user }) {
   const [previewDocxHtml, setPreviewDocxHtml] = useState('');
   const [previewError, setPreviewError] = useState('');
   const [selectedShareFile, setSelectedShareFile] = useState(null);
+  const [selectedVersionFile, setSelectedVersionFile] = useState(null);
   const [activeTab, setActiveTab] = useState('drive'); // home, projects, drive, computers, shared, recent, starred, spam, trash, storage
   const [currentFolderId, setCurrentFolderId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -97,6 +103,19 @@ export default function Dashboard({ onNavigate, user }) {
       return {};
     }
   });
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`nexora_recent_activity_${userKey}`);
+      if (saved) {
+        queueMicrotask(() => {
+          setRecentActivityMap(JSON.parse(saved));
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [userKey]);
 
   const trackItemActivity = (itemId, actionType = 'Opened') => {
     if (!itemId) return;
@@ -369,8 +388,10 @@ export default function Dashboard({ onNavigate, user }) {
 
       setPreviewUrl(data.url);
 
+      const freshUrl = data.url ? `${data.url}${data.url.includes('?') ? '&' : '?'}t=${Date.now()}` : '';
+
       if (isText) {
-        const textRes = await fetch(data.url);
+        const textRes = await fetch(freshUrl || data.url);
         if (!textRes.ok) {
           throw new Error("Failed to load text content");
         }
@@ -380,13 +401,33 @@ export default function Dashboard({ onNavigate, user }) {
 
       if (isDocx) {
         try {
-          const docxRes = await fetch(data.url);
+          const docxRes = await fetch(freshUrl || data.url);
           if (!docxRes.ok) {
             throw new Error("Failed to download document for preview");
           }
           const arrayBuffer = await docxRes.arrayBuffer();
           try {
-            const result = await mammoth.convertToHtml({ arrayBuffer });
+            const result = await mammoth.convertToHtml(
+              { arrayBuffer },
+              {
+                styleMap: [
+                  "u => u",
+                  "p[style-name='align-left'] => p[align='left']:fresh",
+                  "p[style-name='align-center'] => p[align='center']:fresh",
+                  "p[style-name='align-right'] => p[align='right']:fresh",
+                  "p[style-name='align-justify'] => p[align='justify']:fresh"
+                ],
+                transformDocument: mammoth.transforms.paragraph((paragraph) => {
+                  if (paragraph.alignment) {
+                    return {
+                      ...paragraph,
+                      styleName: paragraph.styleName ? `${paragraph.styleName} align-${paragraph.alignment}` : `align-${paragraph.alignment}`
+                    };
+                  }
+                  return paragraph;
+                })
+              }
+            );
             setPreviewDocxHtml(result.value || "<p>Empty document.</p>");
           } catch (mammothErr) {
             const textDecoder = new TextDecoder("utf-8");
@@ -1141,14 +1182,32 @@ export default function Dashboard({ onNavigate, user }) {
         throw new Error(data.message || "Failed to save file content");
       }
       showNotification("success", "File content saved successfully");
+
+      setPreviewDocxHtml(newContent);
       setPreviewTextContent(newContent);
-      setPreviewDocxHtml(`<div className="whitespace-pre-wrap font-sans text-sm">${newContent}</div>`);
+
+      if (selectedPreviewFile) {
+        handlePreviewFile(selectedPreviewFile);
+      }
+
       trackItemActivity(fileId, 'Modified');
       invalidateCache();
       fetchDashboardData(false, true);
     } catch (err) {
       showNotification("error", err.message);
       throw err;
+    }
+  };
+
+  const handleOpenVersionHistory = (file) => {
+    setSelectedVersionFile(file);
+  };
+
+  const handleVersionRestoreSuccess = async (fileId) => {
+    invalidateCache();
+    await fetchDashboardData(false, true);
+    if (selectedPreviewFile && selectedPreviewFile.id === fileId) {
+      handlePreviewFile(selectedPreviewFile);
     }
   };
 
@@ -1279,301 +1338,32 @@ export default function Dashboard({ onNavigate, user }) {
             </div>
 
             {/* Filter controls row (Render on: My Drive, Shared with me, Recent, Starred, Trash) */}
-            {['drive', 'shared', 'recent', 'starred', 'trash'].includes(activeTab) && (
-              <div className="px-6 py-2.5 bg-slate-900/10 border-b border-slate-800/40 flex flex-wrap items-center gap-2.5 z-20 shrink-0">
-
-                {/* 1. Type Dropdown */}
-                <div className="relative">
-                  <button
-                    onClick={() => setActiveFilterDropdown(activeFilterDropdown === 'type' ? null : 'type')}
-                    className={`px-3 py-1 border text-xs rounded-lg flex items-center gap-1.5 transition ${filterType !== 'all'
-                      ? 'border-indigo-800 bg-indigo-950/50 text-indigo-300 font-semibold'
-                      : 'border-slate-800 bg-slate-900/35 text-slate-300 hover:bg-slate-850 hover:text-white'
-                      }`}
-                  >
-                    <span>Type{filterType !== 'all' ? `: ${filterType.toUpperCase()}` : ''}</span>
-                    <svg className="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  {activeFilterDropdown === 'type' && (
-                    <>
-                      <div className="fixed inset-0 z-30" onClick={() => setActiveFilterDropdown(null)} />
-                      <div className="absolute left-0 mt-1.5 w-44 rounded-xl bg-slate-900 border border-slate-800 py-1.5 shadow-xl z-40 text-xs">
-                        {[
-                          { id: 'all', label: 'All types' },
-                          { id: 'folder', label: 'Folders' },
-                          { id: 'docx', label: 'Documents' },
-                          { id: 'xlsx', label: 'Spreadsheets' },
-                          { id: 'presentation', label: 'Presentations' },
-                          { id: 'png', label: 'Photos & images' },
-                          { id: 'pdf', label: 'PDFs' },
-                          { id: 'video', label: 'Videos' },
-                          { id: 'mp3', label: 'Audio' },
-                          { id: 'code', label: 'Code / Text' },
-                          { id: 'zip', label: 'Archives (ZIP)' },
-                        ].map(opt => (
-                          <button
-                            key={opt.id}
-                            onClick={() => {
-                              setFilterType(opt.id);
-                              setActiveFilterDropdown(null);
-                            }}
-                            className={`w-full text-left px-3.5 py-2 hover:bg-slate-800/60 transition ${filterType === opt.id ? 'font-semibold text-indigo-400 bg-indigo-500/10' : 'text-slate-300'}`}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* 2. People Dropdown */}
-                <div className="relative">
-                  <button
-                    onClick={() => setActiveFilterDropdown(activeFilterDropdown === 'people' ? null : 'people')}
-                    className={`px-3 py-1 border text-xs rounded-lg flex items-center gap-1.5 transition ${filterOwner !== 'all'
-                      ? 'border-indigo-800 bg-indigo-950/50 text-indigo-300 font-semibold'
-                      : 'border-slate-800 bg-slate-900/35 text-slate-300 hover:bg-slate-850 hover:text-white'
-                      }`}
-                  >
-                    <span>People{filterOwner !== 'all' ? `: ${filterOwner === 'link' ? 'Shared link' : filterOwner.split(' ')[0]}` : ''}</span>
-                    <svg className="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  {activeFilterDropdown === 'people' && (
-                    <>
-                      <div className="fixed inset-0 z-30" onClick={() => setActiveFilterDropdown(null)} />
-                      <div className="absolute left-0 mt-1.5 w-60 rounded-xl bg-slate-900 border border-slate-800 shadow-xl z-40 text-xs flex flex-col">
-
-                        {/* Search field */}
-                        <div className="p-2 border-b border-slate-800">
-                          <input
-                            type="text"
-                            value={peopleSearch}
-                            onChange={(e) => setPeopleSearch(e.target.value)}
-                            placeholder="Search for people and groups"
-                            className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 text-xs text-white rounded-lg focus:outline-none focus:border-indigo-500 placeholder-slate-600"
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-
-                        {/* People Options list */}
-                        <div className="max-h-56 overflow-y-auto py-1">
-                          {filteredPeople.length === 0 ? (
-                            <div className="p-3.5 text-center text-slate-500 italic">No people found</div>
-                          ) : (
-                            filteredPeople.map(p => (
-                              <button
-                                key={p.id}
-                                onClick={() => {
-                                  setFilterOwner(p.id);
-                                  setActiveFilterDropdown(null);
-                                  setPeopleSearch('');
-                                }}
-                                className={`w-full text-left px-3.5 py-2 hover:bg-slate-800/60 transition flex items-center gap-2.5 ${filterOwner === p.id ? 'font-semibold text-indigo-400 bg-indigo-500/10' : 'text-slate-300'}`}
-                              >
-                                <div className="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-300 text-[8px] font-bold flex items-center justify-center shrink-0">
-                                  {p.initials}
-                                </div>
-                                <div className="flex flex-col min-w-0">
-                                  <span className="font-semibold text-xs truncate">{p.name}</span>
-                                  <span className="text-[9px] text-slate-500 truncate">{p.email}</span>
-                                </div>
-                              </button>
-                            ))
-                          )}
-
-                          {/* "Anyone with the link" option */}
-                          <button
-                            onClick={() => {
-                              setFilterOwner('link');
-                              setActiveFilterDropdown(null);
-                              setPeopleSearch('');
-                            }}
-                            className={`w-full text-left px-3.5 py-2.5 hover:bg-slate-800/60 border-t border-slate-800/60 transition flex items-center gap-2.5 ${filterOwner === 'link' ? 'font-semibold text-indigo-400 bg-indigo-500/10' : 'text-slate-300'}`}
-                          >
-                            <span className="p-1 rounded bg-slate-800 text-indigo-400 shrink-0">
-                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                              </svg>
-                            </span>
-                            <span className="font-semibold text-xs">Anyone with the link</span>
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* 3. Modified Dropdown */}
-                <div className="relative">
-                  <button
-                    onClick={() => setActiveFilterDropdown(activeFilterDropdown === 'modified' ? null : 'modified')}
-                    className={`px-3 py-1 border text-xs rounded-lg flex items-center gap-1.5 transition ${filterModified !== 'all'
-                      ? 'border-indigo-800 bg-indigo-950/50 text-indigo-300 font-semibold'
-                      : 'border-slate-800 bg-slate-900/35 text-slate-300 hover:bg-slate-850 hover:text-white'
-                      }`}
-                  >
-                    <span>Modified{filterModified !== 'all' ? ': Active' : ''}</span>
-                    <svg className="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  {activeFilterDropdown === 'modified' && (
-                    <>
-                      <div className="fixed inset-0 z-30" onClick={() => setActiveFilterDropdown(null)} />
-                      <div
-                        className="absolute left-0 mt-1.5 w-60 rounded-xl bg-slate-900 border border-slate-800 p-2 shadow-xl z-40 text-xs flex flex-col gap-1.5 animate-in fade-in duration-100"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {[
-                          { id: 'all', label: 'Any time' },
-                          { id: 'today', label: 'Today' },
-                          { id: '7days', label: 'Last 7 days' },
-                          { id: '30days', label: 'Last 30 days' },
-                          { id: 'thisyear', label: 'This year' },
-                          { id: 'lastyear', label: 'Last year' },
-                          { id: 'custom', label: 'Custom date range' },
-                        ].map(opt => (
-                          <label
-                            key={opt.id}
-                            className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-slate-800/60 cursor-pointer transition ${tempModified === opt.id ? 'text-indigo-400 font-semibold bg-indigo-500/5' : 'text-slate-300'}`}
-                          >
-                            <input
-                              type="radio"
-                              name="modifiedRange"
-                              checked={tempModified === opt.id}
-                              onChange={() => setTempModified(opt.id)}
-                              className="text-indigo-500 focus:ring-indigo-500 bg-slate-950 border-slate-800"
-                            />
-                            <span>{opt.label}</span>
-                          </label>
-                        ))}
-
-                        {/* Custom Date Range Picker */}
-                        {tempModified === 'custom' && (
-                          <div className="px-2.5 py-2 border border-slate-800 rounded-lg bg-slate-950 flex flex-col gap-2 animate-in fade-in duration-100">
-                            <div className="flex flex-col gap-1">
-                              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Start Date</span>
-                              <input
-                                type="date"
-                                value={customStart}
-                                onChange={(e) => setCustomStart(e.target.value)}
-                                className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-slate-100 text-xs focus:outline-none focus:border-indigo-500"
-                              />
-                            </div>
-                            <div className="flex flex-col gap-1">
-                              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">End Date</span>
-                              <input
-                                type="date"
-                                value={customEnd}
-                                onChange={(e) => setCustomEnd(e.target.value)}
-                                className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-slate-100 text-xs focus:outline-none focus:border-indigo-500"
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Dropdown actions */}
-                        <div className="flex items-center justify-between border-t border-slate-800 pt-2 mt-1 px-1">
-                          <button
-                            onClick={() => setActiveFilterDropdown(null)}
-                            className="text-slate-500 hover:text-slate-300 font-semibold px-2 py-1 transition"
-                          >
-                            Cancel
-                          </button>
-
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => {
-                                setTempModified('all');
-                                setFilterModified('all');
-                                setCustomStart('');
-                                setCustomEnd('');
-                                setActiveFilterDropdown(null);
-                              }}
-                              className="text-slate-400 hover:text-slate-250 font-semibold px-2 py-1 transition"
-                            >
-                              Clear
-                            </button>
-                            <button
-                              onClick={() => {
-                                setFilterModified(tempModified);
-                                setActiveFilterDropdown(null);
-                              }}
-                              className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded font-semibold transition"
-                            >
-                              Apply
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* 5. Sort Dropdown */}
-                <div className="relative">
-                  <button
-                    onClick={() => setActiveFilterDropdown(activeFilterDropdown === 'sort' ? null : 'sort')}
-                    className={`px-3 py-1 border text-xs rounded-lg flex items-center gap-1.5 transition ${sortBy !== 'name' || sortOrder !== 'asc'
-                      ? 'border-indigo-800 bg-indigo-950/50 text-indigo-300 font-semibold'
-                      : 'border-slate-800 bg-slate-900/35 text-slate-300 hover:bg-slate-850 hover:text-white'
-                      }`}
-                  >
-                    <span>Sort: {sortBy === 'name' ? 'Name' : sortBy === 'size' ? 'Size' : 'Date'} ({sortOrder.toUpperCase()})</span>
-                    <svg className="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  {activeFilterDropdown === 'sort' && (
-                    <>
-                      <div className="fixed inset-0 z-30" onClick={() => setActiveFilterDropdown(null)} />
-                      <div className="absolute left-0 mt-1.5 w-44 rounded-xl bg-slate-900 border border-slate-800 py-1.5 shadow-xl z-40 text-xs">
-                        {[
-                          { id: 'name-asc', label: 'Name (A to Z)', sortBy: 'name', sortOrder: 'asc' },
-                          { id: 'name-desc', label: 'Name (Z to A)', sortBy: 'name', sortOrder: 'desc' },
-                          { id: 'date-desc', label: 'Newest first', sortBy: 'date', sortOrder: 'desc' },
-                          { id: 'date-asc', label: 'Oldest first', sortBy: 'date', sortOrder: 'asc' },
-                          { id: 'size-desc', label: 'Size (Large to Small)', sortBy: 'size', sortOrder: 'desc' },
-                          { id: 'size-asc', label: 'Size (Small to Large)', sortBy: 'size', sortOrder: 'asc' },
-                        ].map(opt => (
-                          <button
-                            key={opt.id}
-                            onClick={() => {
-                              setSortBy(opt.sortBy);
-                              setSortOrder(opt.sortOrder);
-                              setActiveFilterDropdown(null);
-                            }}
-                            className={`w-full text-left px-3.5 py-2 hover:bg-slate-800/60 transition ${sortBy === opt.sortBy && sortOrder === opt.sortOrder ? 'font-semibold text-indigo-400 bg-indigo-500/10' : 'text-slate-300'}`}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Reset Filters options link */}
-                {(filterType !== 'all' || filterOwner !== 'all' || filterModified !== 'all' || filterSource !== 'all' || sortBy !== 'name' || sortOrder !== 'asc') && (
-                  <button
-                    onClick={() => {
-                      resetFilters();
-                      setSortBy('name');
-                      setSortOrder('asc');
-                    }}
-                    className="text-xs text-indigo-400 hover:text-indigo-300 hover:underline font-semibold ml-2"
-                  >
-                    Reset filters
-                  </button>
-                )}
-              </div>
-            )}
+            <FilterBar
+              activeTab={activeTab}
+              filterType={filterType}
+              setFilterType={setFilterType}
+              filterOwner={filterOwner}
+              setFilterOwner={setFilterOwner}
+              filterModified={filterModified}
+              setFilterModified={setFilterModified}
+              filterSource={filterSource}
+              activeFilterDropdown={activeFilterDropdown}
+              setActiveFilterDropdown={setActiveFilterDropdown}
+              peopleSearch={peopleSearch}
+              setPeopleSearch={setPeopleSearch}
+              filteredPeople={filteredPeople}
+              tempModified={tempModified}
+              setTempModified={setTempModified}
+              customStart={customStart}
+              setCustomStart={setCustomStart}
+              customEnd={customEnd}
+              setCustomEnd={setCustomEnd}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+              sortOrder={sortOrder}
+              setSortOrder={setSortOrder}
+              resetFilters={resetFilters}
+            />
 
             {/* SCROLLABLE WORKSPACE WINDOW */}
             <div className="flex-1 overflow-y-auto p-6 bg-slate-950/20">
@@ -1869,103 +1659,15 @@ export default function Dashboard({ onNavigate, user }) {
                       RENDER: STORAGE ('storage')
                       ========================================== */}
                   {activeTab === 'storage' && (
-                    <div className="space-y-6">
-
-                      {/* Storage utilization card */}
-                      <div className="bg-slate-900/20 border border-slate-850 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <div className="space-y-2.5 flex-1">
-                          <h3 className="text-sm font-semibold text-slate-200">Nexora Cloud Storage Usage</h3>
-                          <div className="text-3xl font-extrabold text-indigo-400">
-                            {formatSize(totalUsedStorageBytes)} <span className="text-sm font-semibold text-slate-500">of 15 GB used ({usedPercentStr}%)</span>
-                          </div>
-
-                          {/* Segmented storage progress bar */}
-                          <div className="w-full bg-slate-950 border border-slate-850 rounded-full h-3 overflow-hidden flex">
-                            {storageCategories.map(cat => {
-                              if (cat.bytes <= 0) return null;
-                              const pct = Math.max((cat.bytes / totalStorageCapacityBytes) * 100, 0.8);
-                              return (
-                                <div
-                                  key={cat.id}
-                                  className={`${cat.color} h-full transition-all duration-300`}
-                                  style={{ width: `${pct}%` }}
-                                  title={`${cat.label}: ${formatSize(cat.bytes)}`}
-                                />
-                              );
-                            })}
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-4 text-[10px] text-slate-500 font-medium pt-1">
-                            {storageCategories.map(cat => (
-                              <span key={cat.id} className="flex items-center gap-1.5">
-                                <span className={`w-2.5 h-2.5 rounded-full ${cat.color}`} /> {cat.label} ({formatSize(cat.bytes)})
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="shrink-0 flex flex-col gap-2">
-                          <button onClick={() => alert("Payment and upgrades are disabled in demo mode.")} className="py-2.5 px-5 bg-indigo-600 hover:bg-indigo-550 text-white text-xs font-semibold rounded-full shadow-sm hover:shadow transition text-center">
-                            Upgrade Storage Plan
-                          </button>
-                          <button onClick={resetFilters} className="py-2.5 px-5 border border-slate-800 hover:bg-slate-800 text-slate-300 text-xs font-semibold rounded-full transition text-center">
-                            Clean Up Files
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Largest Files Breakdown */}
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Largest files in your drive</h3>
-                          <span className="text-[10px] text-slate-500">Used space rankings</span>
-                        </div>
-
-                        <div className="border border-slate-800/60 rounded-xl overflow-hidden shadow-xs bg-slate-900/10">
-                          <table className="min-w-full border-collapse text-left text-xs">
-                            <thead>
-                              <tr className="bg-slate-900/40 border-b border-slate-800/80 text-slate-400 font-semibold select-none">
-                                <th className="py-3 px-4 font-semibold">Name</th>
-                                <th className="py-3 px-4 font-semibold">Location</th>
-                                <th className="py-3 px-4 font-semibold">Size</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-850/60">
-                              {activeFilesForStorage.length === 0 ? (
-                                <tr>
-                                  <td colSpan="3" className="py-6 text-center text-slate-500 italic">No files in your drive</td>
-                                </tr>
-                              ) : (
-                                [...activeFilesForStorage]
-                                  .sort((a, b) => {
-                                    const sizeA = typeof a.sizeBytes === 'number' && !isNaN(a.sizeBytes) && a.sizeBytes > 0 ? a.sizeBytes : parseSizeInBytes(a.size);
-                                    const sizeB = typeof b.sizeBytes === 'number' && !isNaN(b.sizeBytes) && b.sizeBytes > 0 ? b.sizeBytes : parseSizeInBytes(b.size);
-                                    return sizeB - sizeA;
-                                  })
-                                  .map(file => (
-                                    <tr key={file.id} className="hover:bg-slate-800/35 text-slate-350 hover:text-white transition">
-                                      <td className="py-3 px-4 font-medium">
-                                        <div className="flex items-center gap-2.5 min-w-0">
-                                          <span className="shrink-0">{getFileIcon(file.extension)}</span>
-                                          <span
-                                            className="truncate cursor-pointer hover:text-indigo-400 transition"
-                                            title={file.name}
-                                            onClick={() => handlePreviewFile(file)}
-                                          >
-                                            {file.name}
-                                          </span>
-                                        </div>
-                                      </td>
-                                      <td className="py-3 px-4 text-slate-500">{file.location || 'My Drive'}</td>
-                                      <td className="py-3 px-4 font-semibold text-slate-400">{file.size}</td>
-                                    </tr>
-                                  ))
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
+                    <StorageSection
+                      totalUsedStorageBytes={totalUsedStorageBytes}
+                      totalStorageCapacityBytes={totalStorageCapacityBytes}
+                      usedPercentStr={usedPercentStr}
+                      storageCategories={storageCategories}
+                      activeFilesForStorage={activeFilesForStorage}
+                      handlePreviewFile={handlePreviewFile}
+                      resetFilters={resetFilters}
+                    />
                   )}
 
                 </div>
@@ -1977,50 +1679,30 @@ export default function Dashboard({ onNavigate, user }) {
         </div>
       </main>
 
-      {/* Toast Notifications */}
-      {notification && (
-        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl border shadow-lg text-xs font-semibold flex items-center gap-2 animate-in slide-in-from-top-2 duration-200 ${notification.type === 'success'
-            ? 'bg-emerald-950/90 border-emerald-800 text-emerald-300'
-            : 'bg-rose-950/90 border-rose-800 text-rose-300'
-          }`}>
-          <span>{notification.type === 'success' ? '✓' : '✕'}</span>
-          <span>{notification.message}</span>
-          <button
-            onClick={() => setNotification(null)}
-            className="ml-2 text-slate-400 hover:text-white"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
-
-      {/* FILE PREVIEW MODAL */}
-      <Suspense fallback={null}>
-        <FilePreviewModal
-          selectedPreviewFile={selectedPreviewFile}
-          previewLoading={previewLoading}
-          previewUrl={previewUrl}
-          previewTextContent={previewTextContent}
-          previewDocxHtml={previewDocxHtml}
-          previewError={previewError}
-          onClose={() => setSelectedPreviewFile(null)}
-          getFileIcon={getFileIcon}
-          onSaveContent={handleSaveFileContent}
-        />
-      </Suspense>
-
-      {/* SHARE MODAL */}
-      {selectedShareFile && (
-        <Suspense fallback={null}>
-          <ShareModal
-            file={selectedShareFile}
-            onClose={() => setSelectedShareFile(null)}
-            showNotification={showNotification}
-          />
-        </Suspense>
-      )}
+      {/* Toast Notifications and Modals */}
+      <DashboardModals
+        notification={notification}
+        setNotification={setNotification}
+        selectedPreviewFile={selectedPreviewFile}
+        setSelectedPreviewFile={setSelectedPreviewFile}
+        previewLoading={previewLoading}
+        previewUrl={previewUrl}
+        previewTextContent={previewTextContent}
+        previewDocxHtml={previewDocxHtml}
+        previewError={previewError}
+        getFileIcon={getFileIcon}
+        handleSaveFileContent={handleSaveFileContent}
+        handleOpenVersionHistory={handleOpenVersionHistory}
+        selectedShareFile={selectedShareFile}
+        setSelectedShareFile={setSelectedShareFile}
+        showNotification={showNotification}
+        selectedVersionFile={selectedVersionFile}
+        setSelectedVersionFile={setSelectedVersionFile}
+        handleVersionRestoreSuccess={handleVersionRestoreSuccess}
+        FilePreviewModal={FilePreviewModal}
+        ShareModal={ShareModal}
+        VersionHistoryModal={VersionHistoryModal}
+      />
     </div>
   );
 }

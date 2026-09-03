@@ -171,7 +171,7 @@ export default function FileList({
                     </span>
                   </div>
                 </td>
-                <td className="py-3 px-4 text-slate-500">{file.reasonSuggested}</td>
+                <td className="py-3 px-4 text-slate-500">{file.lastActionType || file.reasonSuggested || 'Opened'}</td>
                 <td className="py-3 px-4 text-slate-500">{file.updatedAt}</td>
                 <td className="py-3 px-4 text-slate-500">{file.size}</td>
               </tr>

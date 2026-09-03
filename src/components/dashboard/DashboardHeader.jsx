@@ -1,4 +1,4 @@
-import { SearchIcon, HelpIcon, SettingsIcon, AppsIcon } from '../Icons';
+import { SearchIcon } from '../Icons';
 
 export default function DashboardHeader({
   setIsSidebarOpen,
@@ -49,15 +49,6 @@ export default function DashboardHeader({
 
       {/* Right Header Controls */}
       <div className="flex items-center gap-2">
-        <button className="p-2 rounded-full hover:bg-slate-900 text-slate-400 transition" title="Help">
-          <HelpIcon />
-        </button>
-        <button className="p-2 rounded-full hover:bg-slate-900 text-slate-400 transition" title="Settings">
-          <SettingsIcon />
-        </button>
-        <button className="p-2 rounded-full hover:bg-slate-900 text-slate-400 transition" title="Apps">
-          <AppsIcon />
-        </button>
 
         {/* Profile Dropdown Trigger */}
         <div className="relative ml-1">
