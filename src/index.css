@@ -1,5 +1,22 @@
 @import "tailwindcss";
 
+.docx-preview-content {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+
+.docx-preview-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+.docx-preview-content table {
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
 .docx-preview-content h1 {
   font-size: 1.5rem;
   font-weight: 700;

@@ -24,27 +24,27 @@ export default function FileList({
 
   if (activeTab === 'trash') {
     return (
-      <div className="border border-slate-800/60 rounded-xl overflow-hidden shadow-xs bg-slate-900/10">
-        <table className="min-w-full border-collapse text-left text-xs">
+      <div className="w-full overflow-x-auto border border-slate-800/60 rounded-xl shadow-xs bg-slate-900/10">
+        <table className="w-full min-w-[340px] border-collapse text-left text-xs">
           <thead>
             <tr className="bg-slate-900/40 border-b border-slate-800/80 text-slate-400 font-semibold select-none">
-              <th onClick={() => onSort && onSort('name')} className="py-3 px-4 font-semibold cursor-pointer hover:text-indigo-400 transition">
+              <th onClick={() => onSort && onSort('name')} className="py-3 px-3 sm:px-4 font-semibold cursor-pointer hover:text-indigo-400 transition">
                 Name{renderSortIndicator('name')}
               </th>
-              <th onClick={() => onSort && onSort('date')} className="py-3 px-4 font-semibold cursor-pointer hover:text-indigo-400 transition">
+              <th onClick={() => onSort && onSort('date')} className="py-3 px-3 sm:px-4 font-semibold cursor-pointer hover:text-indigo-400 transition whitespace-nowrap">
                 Date Deleted{renderSortIndicator('date')}
               </th>
-              <th onClick={() => onSort && onSort('size')} className="py-3 px-4 font-semibold w-24 cursor-pointer hover:text-indigo-400 transition">
+              <th onClick={() => onSort && onSort('size')} className="py-3 px-3 sm:px-4 font-semibold w-20 sm:w-24 cursor-pointer hover:text-indigo-400 transition hidden xs:table-cell">
                 Size{renderSortIndicator('size')}
               </th>
-              <th className="py-3 px-4 w-28 text-right">Actions</th>
+              <th className="py-3 px-3 sm:px-4 w-24 sm:w-28 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-850/60">
             {items.map(item => (
               <tr key={item.id} className="hover:bg-slate-800/35 text-slate-350 hover:text-white transition">
-                <td className="py-2.5 px-4 font-medium">
-                  <div className="flex items-center gap-2.5 min-w-0">
+                <td className="py-2.5 px-3 sm:px-4 font-medium max-w-[120px] xs:max-w-[180px] sm:max-w-none">
+                  <div className="flex items-center gap-2 min-w-0">
                     <span className="shrink-0">
                       {item.type === 'folder' ? (
                         <FolderIcon className="w-4 h-4 text-slate-400" />
@@ -55,14 +55,14 @@ export default function FileList({
                     <span className="truncate" title={item.name}>{item.name}</span>
                   </div>
                 </td>
-                <td className="py-2.5 px-4 text-slate-500">{item.updatedAt}</td>
-                <td className="py-2.5 px-4 text-slate-500">{item.size}</td>
-                <td className="py-2.5 px-4 text-right">
-                  <div className="flex items-center justify-end gap-2">
+                <td className="py-2.5 px-3 sm:px-4 text-slate-500 whitespace-nowrap text-[11px] sm:text-xs">{item.updatedAt}</td>
+                <td className="py-2.5 px-3 sm:px-4 text-slate-500 whitespace-nowrap hidden xs:table-cell">{item.size}</td>
+                <td className="py-2.5 px-3 sm:px-4 text-right">
+                  <div className="flex items-center justify-end gap-1.5">
                     {/* Restore Action */}
                     <button
                       onClick={(e) => onRestoreItem(item.id, e)}
-                      className="py-1 px-2 border border-slate-850 rounded hover:bg-slate-800 font-semibold text-indigo-400 transition"
+                      className="py-1 px-2 border border-slate-850 rounded hover:bg-slate-800 font-semibold text-indigo-400 transition text-[11px] sm:text-xs"
                       title="Restore item"
                     >
                       Restore
@@ -70,7 +70,7 @@ export default function FileList({
                     {/* Permanent Delete Action */}
                     <button
                       onClick={(e) => onDeletePermanent(item.id, e)}
-                      className="p-1 rounded text-red-400 hover:bg-red-950/40 border border-transparent hover:border-red-900/40 transition"
+                      className="p-1 rounded text-red-400 hover:bg-red-950/40 border border-transparent hover:border-red-900/40 transition shrink-0"
                       title="Delete permanently"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -89,18 +89,18 @@ export default function FileList({
 
   if (activeTab === 'shared') {
     return (
-      <div className="border border-slate-800/60 rounded-xl overflow-hidden shadow-xs bg-slate-900/10">
-        <table className="min-w-full border-collapse text-left text-xs">
+      <div className="w-full overflow-x-auto border border-slate-800/60 rounded-xl shadow-xs bg-slate-900/10">
+        <table className="w-full min-w-[350px] border-collapse text-left text-xs">
           <thead>
             <tr className="bg-slate-900/40 border-b border-slate-800/80 text-slate-400 font-semibold select-none">
-              <th onClick={() => onSort && onSort('name')} className="py-3 px-4 font-semibold w-1/3 cursor-pointer hover:text-indigo-400 transition">
+              <th onClick={() => onSort && onSort('name')} className="py-3 px-3 sm:px-4 font-semibold cursor-pointer hover:text-indigo-400 transition">
                 Name{renderSortIndicator('name')}
               </th>
-              <th className="py-3 px-4 font-semibold">Shared by</th>
-              <th onClick={() => onSort && onSort('date')} className="py-3 px-4 font-semibold cursor-pointer hover:text-indigo-400 transition">
+              <th className="py-3 px-3 sm:px-4 font-semibold">Shared by</th>
+              <th onClick={() => onSort && onSort('date')} className="py-3 px-3 sm:px-4 font-semibold cursor-pointer hover:text-indigo-400 transition whitespace-nowrap">
                 Share Date{renderSortIndicator('date')}
               </th>
-              <th onClick={() => onSort && onSort('size')} className="py-3 px-4 font-semibold w-24 cursor-pointer hover:text-indigo-400 transition">
+              <th onClick={() => onSort && onSort('size')} className="py-3 px-3 sm:px-4 font-semibold w-20 sm:w-24 cursor-pointer hover:text-indigo-400 transition hidden xs:table-cell">
                 Size{renderSortIndicator('size')}
               </th>
             </tr>
@@ -108,7 +108,7 @@ export default function FileList({
           <tbody className="divide-y divide-slate-850/60">
             {items.map(file => (
               <tr key={file.id} className="hover:bg-slate-800/35 text-slate-350 hover:text-white transition">
-                <td className="py-3 px-4 font-medium">
+                <td className="py-3 px-3 sm:px-4 font-medium max-w-[130px] xs:max-w-[180px] sm:max-w-none">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span className="shrink-0">{getFileIcon(file.extension)}</span>
                     <span
@@ -120,16 +120,16 @@ export default function FileList({
                     </span>
                   </div>
                 </td>
-                <td className="py-3 px-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 text-[8px] uppercase">
+                <td className="py-3 px-3 sm:px-4">
+                  <div className="flex items-center gap-2 min-w-0 max-w-[120px] xs:max-w-[160px] sm:max-w-none">
+                    <div className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 text-[8px] uppercase shrink-0">
                       {file.owner === 'me' ? 'me' : file.owner.split(' ').map(n => n[0]).join('')}
                     </div>
-                    <span>{file.owner === 'me' ? 'me' : file.owner}</span>
+                    <span className="truncate break-words">{file.owner === 'me' ? 'me' : file.owner}</span>
                   </div>
                 </td>
-                <td className="py-3 px-4 text-slate-500">{file.updatedAt}</td>
-                <td className="py-3 px-4 text-slate-500">{file.size}</td>
+                <td className="py-3 px-3 sm:px-4 text-slate-500 whitespace-nowrap text-[11px] sm:text-xs">{file.updatedAt}</td>
+                <td className="py-3 px-3 sm:px-4 text-slate-500 whitespace-nowrap hidden xs:table-cell">{file.size}</td>
               </tr>
             ))}
           </tbody>
@@ -140,18 +140,18 @@ export default function FileList({
 
   if (activeTab === 'recent') {
     return (
-      <div className="border border-slate-800/60 rounded-xl overflow-hidden shadow-xs bg-slate-900/10">
-        <table className="min-w-full border-collapse text-left text-xs">
+      <div className="w-full overflow-x-auto border border-slate-800/60 rounded-xl shadow-xs bg-slate-900/10">
+        <table className="w-full min-w-[340px] border-collapse text-left text-xs">
           <thead>
             <tr className="bg-slate-900/40 border-b border-slate-800/80 text-slate-400 font-semibold select-none">
-              <th onClick={() => onSort && onSort('name')} className="py-3 px-4 font-semibold cursor-pointer hover:text-indigo-400 transition">
+              <th onClick={() => onSort && onSort('name')} className="py-3 px-3 sm:px-4 font-semibold cursor-pointer hover:text-indigo-400 transition">
                 Name{renderSortIndicator('name')}
               </th>
-              <th className="py-3 px-4 font-semibold">Activity</th>
-              <th onClick={() => onSort && onSort('date')} className="py-3 px-4 font-semibold cursor-pointer hover:text-indigo-400 transition">
+              <th className="py-3 px-3 sm:px-4 font-semibold whitespace-nowrap">Activity</th>
+              <th onClick={() => onSort && onSort('date')} className="py-3 px-3 sm:px-4 font-semibold cursor-pointer hover:text-indigo-400 transition whitespace-nowrap">
                 Date modified{renderSortIndicator('date')}
               </th>
-              <th onClick={() => onSort && onSort('size')} className="py-3 px-4 font-semibold w-24 cursor-pointer hover:text-indigo-400 transition">
+              <th onClick={() => onSort && onSort('size')} className="py-3 px-3 sm:px-4 font-semibold w-20 sm:w-24 cursor-pointer hover:text-indigo-400 transition hidden xs:table-cell">
                 Size{renderSortIndicator('size')}
               </th>
             </tr>
@@ -159,7 +159,7 @@ export default function FileList({
           <tbody className="divide-y divide-slate-850/60">
             {items.map(file => (
               <tr key={file.id} className="hover:bg-slate-800/35 text-slate-350 hover:text-white transition">
-                <td className="py-3 px-4 font-medium">
+                <td className="py-3 px-3 sm:px-4 font-medium max-w-[120px] xs:max-w-[180px] sm:max-w-none">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span className="shrink-0">{getFileIcon(file.extension)}</span>
                     <span
@@ -171,9 +171,9 @@ export default function FileList({
                     </span>
                   </div>
                 </td>
-                <td className="py-3 px-4 text-slate-500">{file.lastActionType || file.reasonSuggested || 'Opened'}</td>
-                <td className="py-3 px-4 text-slate-500">{file.updatedAt}</td>
-                <td className="py-3 px-4 text-slate-500">{file.size}</td>
+                <td className="py-3 px-3 sm:px-4 text-slate-500 whitespace-nowrap">{file.lastActionType || file.reasonSuggested || 'Opened'}</td>
+                <td className="py-3 px-3 sm:px-4 text-slate-500 whitespace-nowrap text-[11px] sm:text-xs">{file.updatedAt}</td>
+                <td className="py-3 px-3 sm:px-4 text-slate-500 whitespace-nowrap hidden xs:table-cell">{file.size}</td>
               </tr>
             ))}
           </tbody>
@@ -184,24 +184,24 @@ export default function FileList({
 
   if (activeTab === 'starred') {
     return (
-      <div className="border border-slate-800/60 rounded-xl overflow-hidden shadow-xs bg-slate-900/10">
-        <table className="min-w-full border-collapse text-left text-xs">
+      <div className="w-full overflow-x-auto border border-slate-800/60 rounded-xl shadow-xs bg-slate-900/10">
+        <table className="w-full min-w-[320px] border-collapse text-left text-xs">
           <thead>
             <tr className="bg-slate-900/40 border-b border-slate-800/80 text-slate-400 font-semibold select-none">
-              <th onClick={() => onSort && onSort('name')} className="py-3 px-4 font-semibold cursor-pointer hover:text-indigo-400 transition">
+              <th onClick={() => onSort && onSort('name')} className="py-3 px-3 sm:px-4 font-semibold cursor-pointer hover:text-indigo-400 transition">
                 Name{renderSortIndicator('name')}
               </th>
-              <th className="py-3 px-4 font-semibold">Owner</th>
-              <th onClick={() => onSort && onSort('date')} className="py-3 px-4 font-semibold cursor-pointer hover:text-indigo-400 transition">
+              <th className="py-3 px-3 sm:px-4 font-semibold">Owner</th>
+              <th onClick={() => onSort && onSort('date')} className="py-3 px-3 sm:px-4 font-semibold cursor-pointer hover:text-indigo-400 transition whitespace-nowrap">
                 Modified{renderSortIndicator('date')}
               </th>
-              <th className="py-3 px-4 w-12"></th>
+              <th className="py-3 px-3 sm:px-4 w-12"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-850/60">
             {items.map(file => (
               <tr key={file.id} className="group hover:bg-slate-800/35 text-slate-350 hover:text-white transition">
-                <td className="py-2.5 px-4 font-medium">
+                <td className="py-2.5 px-3 sm:px-4 font-medium max-w-[130px] xs:max-w-[180px] sm:max-w-none">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span className="shrink-0">{getFileIcon(file.extension)}</span>
                     <span
@@ -213,9 +213,9 @@ export default function FileList({
                     </span>
                   </div>
                 </td>
-                <td className="py-2.5 px-4 text-slate-500">{file.owner}</td>
-                <td className="py-2.5 px-4 text-slate-500">{file.updatedAt}</td>
-                <td className="py-2.5 px-4 text-right">
+                <td className="py-2.5 px-3 sm:px-4 text-slate-500 truncate max-w-[100px] sm:max-w-none">{file.owner}</td>
+                <td className="py-2.5 px-3 sm:px-4 text-slate-500 whitespace-nowrap text-[11px] sm:text-xs">{file.updatedAt}</td>
+                <td className="py-2.5 px-3 sm:px-4 text-right">
                   <div className="flex items-center justify-end gap-1.5">
                     <button
                       onClick={(e) => {
@@ -247,23 +247,23 @@ export default function FileList({
 
   // Default is 'drive' tab or general list
   return (
-    <div className="border border-slate-800/60 rounded-xl overflow-hidden shadow-sm bg-slate-900/10">
-      <table className="min-w-full border-collapse text-left text-xs">
+    <div className="w-full overflow-x-auto border border-slate-800/60 rounded-xl shadow-sm bg-slate-900/10">
+      <table className="w-full min-w-[320px] border-collapse text-left text-xs">
         <thead>
           <tr className="bg-slate-900/40 border-b border-slate-800/80 text-slate-400 font-semibold select-none">
-            <th onClick={() => onSort && onSort('name')} className="py-3 px-4 font-semibold w-1/3 cursor-pointer hover:text-indigo-400 transition">
+            <th onClick={() => onSort && onSort('name')} className="py-3 px-3 sm:px-4 font-semibold w-1/3 cursor-pointer hover:text-indigo-400 transition">
               Name{renderSortIndicator('name')}
             </th>
-            <th className="py-3 px-4 font-semibold w-1/4 hidden sm:table-cell">Reason suggested</th>
-            <th className="py-3 px-4 font-semibold hidden md:table-cell">Owner</th>
-            <th className="py-3 px-4 font-semibold hidden sm:table-cell">Location</th>
-            <th className="py-3 px-4 w-12"></th>
+            <th className="py-3 px-3 sm:px-4 font-semibold w-1/4 hidden sm:table-cell">Reason suggested</th>
+            <th className="py-3 px-3 sm:px-4 font-semibold hidden md:table-cell">Owner</th>
+            <th className="py-3 px-3 sm:px-4 font-semibold hidden sm:table-cell">Location</th>
+            <th className="py-3 px-3 sm:px-4 w-12"></th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-850/60">
           {items.map(file => (
             <tr key={file.id} className="group hover:bg-slate-800/35 text-slate-350 hover:text-white transition duration-150">
-              <td className="py-2.5 px-4 font-medium">
+              <td className="py-2.5 px-3 sm:px-4 font-medium max-w-[130px] xs:max-w-[180px] sm:max-w-none">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span className="shrink-0">
                     {file.type === 'folder' ? (
@@ -273,7 +273,7 @@ export default function FileList({
                     )}
                   </span>
                   <span
-                    className="truncate max-w-[160px] sm:max-w-xs hover:text-indigo-400 cursor-pointer transition"
+                    className="truncate hover:text-indigo-400 cursor-pointer transition"
                     title={file.name}
                     onClick={() => {
                       if (file.type === 'folder') {
@@ -288,10 +288,10 @@ export default function FileList({
                   </span>
                 </div>
               </td>
-              <td className="py-2.5 px-4 text-slate-500 hidden sm:table-cell">
+              <td className="py-2.5 px-3 sm:px-4 text-slate-500 hidden sm:table-cell">
                 {file.reasonSuggested || 'You opened • Aug 20'}
               </td>
-              <td className="py-2.5 px-4 hidden md:table-cell">
+              <td className="py-2.5 px-3 sm:px-4 hidden md:table-cell">
                 <div className="flex items-center gap-2">
                   <div className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 text-[8px] uppercase">
                     {file.owner === 'me' ? 'me' : file.owner.split(' ').map(n => n[0]).join('')}
@@ -299,13 +299,13 @@ export default function FileList({
                   <span className="text-slate-400">{file.owner === 'me' ? 'me' : file.owner}</span>
                 </div>
               </td>
-              <td className="py-2.5 px-4 text-slate-500 hidden sm:table-cell">
+              <td className="py-2.5 px-3 sm:px-4 text-slate-500 hidden sm:table-cell">
                 <div className="flex items-center gap-1.5">
                   <FolderIcon className="w-3.5 h-3.5 text-indigo-400/60" />
                   <span>{file.location || 'My Drive'}</span>
                 </div>
               </td>
-              <td className="py-2.5 px-4 text-right">
+              <td className="py-2.5 px-3 sm:px-4 text-right">
                 <div className="flex items-center justify-end gap-1.5">
                   {file.type === 'file' && (
                     <button

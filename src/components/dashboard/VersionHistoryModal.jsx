@@ -212,23 +212,23 @@ export default function VersionHistoryModal({ file, onClose, onRestoreSuccess, s
                 return (
                   <div
                     key={ver.id}
-                    className={`group border rounded-xl p-4 transition flex items-center justify-between gap-4 ${
+                    className={`group border rounded-xl p-3.5 sm:p-4 transition flex flex-col xs:flex-row xs:items-center justify-between gap-3 ${
                       isLatest
                         ? 'bg-indigo-950/20 border-indigo-500/30'
                         : 'bg-slate-950/40 border-slate-800 hover:border-slate-700'
                     }`}
                   >
-                    <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="flex items-start sm:items-center gap-2.5 sm:gap-3.5 min-w-0 flex-wrap xs:flex-nowrap">
                       <div className="px-2.5 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 font-mono text-xs font-bold shrink-0">
                         v{ver.version_number}
                       </div>
                       <div className="flex flex-col min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                           <span className="text-xs font-semibold text-slate-200">
                             {formattedDate}
                           </span>
                           {isLatest && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
                               Active Snapshot
                             </span>
                           )}
@@ -239,7 +239,7 @@ export default function VersionHistoryModal({ file, onClose, onRestoreSuccess, s
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0 w-full xs:w-auto justify-end">
                       {/* View / Download Action */}
                       <button
                         type="button"

@@ -105,36 +105,38 @@ export default function FilePreviewModal({
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 md:p-6 animate-in fade-in duration-200"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-2 sm:p-4 md:p-6 animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl max-h-[94vh] sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/50">
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="shrink-0">{getFileIcon(selectedPreviewFile.extension)}</span>
-            <div className="flex flex-col min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-slate-100 truncate" title={selectedPreviewFile.name}>
-                  {selectedPreviewFile.name}
-                </span>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${isEditor
-                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                    : 'bg-slate-800 text-slate-400 border border-slate-700'
-                  }`}>
-                  {isEditor ? (selectedPreviewFile.owner === 'me' ? 'Owner' : 'Editor') : 'Viewer (Read-only)'}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-3.5 py-3 sm:px-6 sm:py-4 border-b border-slate-800 bg-slate-950/50 shrink-0 gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0 w-full sm:w-auto justify-between sm:justify-start">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <span className="shrink-0">{getFileIcon(selectedPreviewFile.extension)}</span>
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                  <span className="text-xs sm:text-sm font-bold text-slate-100 truncate max-w-[140px] xs:max-w-[220px] sm:max-w-md" title={selectedPreviewFile.name}>
+                    {selectedPreviewFile.name}
+                  </span>
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold shrink-0 ${isEditor
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                      : 'bg-slate-800 text-slate-400 border border-slate-700'
+                    }`}>
+                    {isEditor ? (selectedPreviewFile.owner === 'me' ? 'Owner' : 'Editor') : 'Viewer (Read-only)'}
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-500 mt-0.5 truncate">
+                  {selectedPreviewFile.size} • Modified {selectedPreviewFile.updatedAt}
                 </span>
               </div>
-              <span className="text-[10px] text-slate-500 mt-0.5">
-                {selectedPreviewFile.size} • Modified {selectedPreviewFile.updatedAt}
-              </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap shrink-0 w-full sm:w-auto justify-end">
             {/* Editor Action Buttons */}
             {isEditor && isTextOrDocx && !previewLoading && (
               isEditing ? (
@@ -142,14 +144,14 @@ export default function FilePreviewModal({
                   <button
                     onClick={() => setIsEditing(false)}
                     disabled={isSaving}
-                    className="px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs font-medium transition"
+                    className="px-2.5 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs font-medium transition"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSave}
                     disabled={isSaving}
-                    className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-xs transition flex items-center gap-1.5"
+                    className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-xs transition flex items-center gap-1.5"
                   >
                     {isSaving ? (
                       <>
@@ -168,7 +170,7 @@ export default function FilePreviewModal({
                 <button
                   onClick={handleStartEdit}
                   disabled={pdfLoading}
-                  className="px-3.5 py-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-xs font-semibold transition flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-xs font-semibold transition flex items-center gap-1.5"
                 >
                   {pdfLoading ? (
                     <svg className="animate-spin h-3.5 w-3.5 text-indigo-300" fill="none" viewBox="0 0 24 24">
@@ -188,7 +190,7 @@ export default function FilePreviewModal({
             {onOpenVersionHistory && (
               <button
                 onClick={() => onOpenVersionHistory(selectedPreviewFile)}
-                className="px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-medium transition flex items-center gap-1.5"
+                className="px-2.5 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-medium transition flex items-center gap-1.5"
                 title="View version history"
               >
                 <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -200,7 +202,7 @@ export default function FilePreviewModal({
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition"
+              className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition shrink-0"
               title="Close preview"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -211,9 +213,9 @@ export default function FilePreviewModal({
         </div>
 
         {/* Modal Body / Viewer / Editor */}
-        <div className="flex-1 overflow-auto p-6 flex items-center justify-center bg-slate-950/40 min-h-[450px]">
+        <div className="flex-1 overflow-auto p-2 sm:p-6 flex items-center justify-center bg-slate-950/40 min-h-0">
           {previewLoading ? (
-            <div className="flex flex-col items-center justify-center my-auto gap-3">
+            <div className="flex flex-col items-center justify-center my-auto gap-3 py-12">
               <svg className="animate-spin h-8 w-8 text-indigo-500" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -221,13 +223,13 @@ export default function FilePreviewModal({
               <span className="text-xs text-slate-400 font-medium">Loading document...</span>
             </div>
           ) : isEditing ? (
-            <div className="w-full max-w-4xl flex flex-col h-[65vh] bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
+            <div className="w-full max-w-4xl flex flex-col h-[70vh] sm:h-[65vh] bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
               {/* Document Editor Formatting Toolbar */}
-              <div className="flex items-center gap-1 p-2 bg-slate-950 border-b border-slate-800 flex-wrap shrink-0 select-none">
+              <div className="flex items-center gap-1 p-1.5 sm:p-2 bg-slate-950 border-b border-slate-800 flex-wrap shrink-0 select-none overflow-x-auto max-w-full">
                 <button
                   type="button"
                   onClick={() => executeCmd('undo')}
-                  className="p-1.5 text-xs font-medium hover:bg-slate-800 text-slate-300 hover:text-white rounded px-2 transition flex items-center gap-1"
+                  className="p-1.5 text-xs font-medium hover:bg-slate-800 text-slate-300 hover:text-white rounded px-2 transition flex items-center gap-1 shrink-0"
                   title="Undo (Ctrl+Z)"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -238,7 +240,7 @@ export default function FilePreviewModal({
                 <button
                   type="button"
                   onClick={() => executeCmd('redo')}
-                  className="p-1.5 text-xs font-medium hover:bg-slate-800 text-slate-300 hover:text-white rounded px-2 transition flex items-center gap-1"
+                  className="p-1.5 text-xs font-medium hover:bg-slate-800 text-slate-300 hover:text-white rounded px-2 transition flex items-center gap-1 shrink-0"
                   title="Redo (Ctrl+Y)"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -246,11 +248,11 @@ export default function FilePreviewModal({
                   </svg>
                   Redo
                 </button>
-                <div className="h-4 w-px bg-slate-800 mx-1" />
+                <div className="hidden xs:block h-4 w-px bg-slate-800 mx-0.5 shrink-0" />
                 <button
                   type="button"
                   onClick={() => executeCmd('bold')}
-                  className="p-1.5 text-xs font-bold hover:bg-slate-800 text-slate-200 rounded px-2.5 transition"
+                  className="p-1.5 text-xs font-bold hover:bg-slate-800 text-slate-200 rounded px-2 transition shrink-0"
                   title="Bold"
                 >
                   B
@@ -258,7 +260,7 @@ export default function FilePreviewModal({
                 <button
                   type="button"
                   onClick={() => executeCmd('italic')}
-                  className="p-1.5 text-xs italic hover:bg-slate-800 text-slate-200 rounded px-2.5 transition"
+                  className="p-1.5 text-xs italic hover:bg-slate-800 text-slate-200 rounded px-2 transition shrink-0"
                   title="Italic"
                 >
                   I
@@ -266,16 +268,16 @@ export default function FilePreviewModal({
                 <button
                   type="button"
                   onClick={() => executeCmd('underline')}
-                  className="p-1.5 text-xs underline hover:bg-slate-800 text-slate-200 rounded px-2.5 transition"
+                  className="p-1.5 text-xs underline hover:bg-slate-800 text-slate-200 rounded px-2 transition shrink-0"
                   title="Underline"
                 >
                   U
                 </button>
-                <div className="h-4 w-px bg-slate-800 mx-1" />
+                <div className="hidden xs:block h-4 w-px bg-slate-800 mx-0.5 shrink-0" />
                 <button
                   type="button"
                   onClick={() => executeCmd('formatBlock', '<h1>')}
-                  className="p-1.5 text-xs font-semibold hover:bg-slate-800 text-slate-200 rounded px-2 transition"
+                  className="p-1.5 text-xs font-semibold hover:bg-slate-800 text-slate-200 rounded px-2 transition shrink-0"
                   title="Heading 1"
                 >
                   H1
@@ -283,7 +285,7 @@ export default function FilePreviewModal({
                 <button
                   type="button"
                   onClick={() => executeCmd('formatBlock', '<h2>')}
-                  className="p-1.5 text-xs font-semibold hover:bg-slate-800 text-slate-200 rounded px-2 transition"
+                  className="p-1.5 text-xs font-semibold hover:bg-slate-800 text-slate-200 rounded px-2 transition shrink-0"
                   title="Heading 2"
                 >
                   H2
@@ -291,16 +293,16 @@ export default function FilePreviewModal({
                 <button
                   type="button"
                   onClick={() => executeCmd('formatBlock', '<p>')}
-                  className="p-1.5 text-xs hover:bg-slate-800 text-slate-200 rounded px-2 transition"
+                  className="p-1.5 text-xs hover:bg-slate-800 text-slate-200 rounded px-2 transition shrink-0"
                   title="Paragraph"
                 >
                   P
                 </button>
-                <div className="h-4 w-px bg-slate-800 mx-1" />
+                <div className="hidden xs:block h-4 w-px bg-slate-800 mx-0.5 shrink-0" />
                 <button
                   type="button"
                   onClick={() => executeCmd('insertUnorderedList')}
-                  className="p-1.5 text-xs hover:bg-slate-800 text-slate-200 rounded px-2 transition"
+                  className="p-1.5 text-xs hover:bg-slate-800 text-slate-200 rounded px-2 transition shrink-0"
                   title="Bulleted List"
                 >
                   • List
@@ -308,16 +310,16 @@ export default function FilePreviewModal({
                 <button
                   type="button"
                   onClick={() => executeCmd('insertOrderedList')}
-                  className="p-1.5 text-xs hover:bg-slate-800 text-slate-200 rounded px-2 transition"
+                  className="p-1.5 text-xs hover:bg-slate-800 text-slate-200 rounded px-2 transition shrink-0"
                   title="Numbered List"
                 >
                   1. List
                 </button>
-                <div className="h-4 w-px bg-slate-800 mx-1" />
+                <div className="hidden xs:block h-4 w-px bg-slate-800 mx-0.5 shrink-0" />
                 <button
                   type="button"
                   onClick={() => executeCmd('justifyLeft')}
-                  className="p-1.5 text-xs hover:bg-slate-800 text-slate-200 rounded px-2 transition"
+                  className="p-1.5 text-xs hover:bg-slate-800 text-slate-200 rounded px-2 transition shrink-0"
                   title="Align Left"
                 >
                   Left
@@ -325,7 +327,7 @@ export default function FilePreviewModal({
                 <button
                   type="button"
                   onClick={() => executeCmd('justifyCenter')}
-                  className="p-1.5 text-xs hover:bg-slate-800 text-slate-200 rounded px-2 transition"
+                  className="p-1.5 text-xs hover:bg-slate-800 text-slate-200 rounded px-2 transition shrink-0"
                   title="Align Center"
                 >
                   Center
@@ -333,7 +335,7 @@ export default function FilePreviewModal({
                 <button
                   type="button"
                   onClick={() => executeCmd('justifyRight')}
-                  className="p-1.5 text-xs hover:bg-slate-800 text-slate-200 rounded px-2 transition"
+                  className="p-1.5 text-xs hover:bg-slate-800 text-slate-200 rounded px-2 transition shrink-0"
                   title="Align Right"
                 >
                   Right
@@ -341,12 +343,12 @@ export default function FilePreviewModal({
               </div>
 
               {/* Styled Document Paper Container */}
-              <div className="flex-1 p-6 overflow-auto bg-slate-950/60 flex justify-center">
+              <div className="flex-1 p-2.5 sm:p-6 overflow-auto bg-slate-950/60 flex justify-center w-full min-h-0">
                 <div
                   ref={editorRef}
                   contentEditable
                   suppressContentEditableWarning
-                  className="w-full max-w-3xl min-h-[480px] bg-slate-900 text-slate-100 border border-slate-800 rounded-lg p-8 shadow-inner font-sans text-sm leading-relaxed outline-none focus:border-indigo-500/60 select-text docx-preview-content"
+                  className="w-full max-w-3xl min-h-[350px] sm:min-h-[480px] bg-slate-900 text-slate-100 border border-slate-800 rounded-lg p-3.5 sm:p-8 shadow-inner font-sans text-sm leading-relaxed outline-none focus:border-indigo-500/60 select-text docx-preview-content break-words overflow-x-hidden max-w-full"
                 />
               </div>
             </div>
@@ -377,7 +379,7 @@ export default function FilePreviewModal({
 
               {/* Text Preview */}
               {['txt', 'html', 'css', 'js', 'jsx', 'json', 'md'].includes(selectedPreviewFile.extension) && (
-                <div className="w-full max-w-4xl h-[65vh] overflow-auto border border-slate-800 rounded-xl p-6 bg-slate-950 font-mono text-xs text-slate-300 whitespace-pre-wrap select-text text-left leading-relaxed shadow-lg">
+                <div className="w-full max-w-4xl h-[65vh] overflow-auto border border-slate-800 rounded-xl p-3.5 sm:p-6 bg-slate-950 font-mono text-xs text-slate-300 whitespace-pre-wrap break-words max-w-full select-text text-left leading-relaxed shadow-lg">
                   {previewTextContent || "Empty file content."}
                 </div>
               )}
@@ -397,7 +399,7 @@ export default function FilePreviewModal({
                     </p>
                   </div>
                 ) : (
-                  <div className="w-full max-w-4xl h-[65vh] overflow-auto border border-slate-800 rounded-xl bg-slate-900 p-8 text-slate-200 text-sm select-text text-left leading-relaxed docx-preview-content shadow-lg">
+                  <div className="w-full max-w-4xl h-[65vh] overflow-auto border border-slate-800 rounded-xl bg-slate-900 p-3.5 sm:p-8 text-slate-200 text-sm select-text text-left leading-relaxed docx-preview-content break-words max-w-full shadow-lg">
                     <div dangerouslySetInnerHTML={{ __html: previewDocxHtml || "<p className='text-slate-500 italic'>Empty document.</p>" }} />
                   </div>
                 )

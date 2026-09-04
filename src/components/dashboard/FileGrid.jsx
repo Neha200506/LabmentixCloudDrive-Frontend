@@ -15,16 +15,16 @@ export default function FileGrid({
 }) {
   if (viewType === 'folder') {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         {items.map(folder => (
           <div
             key={folder.id}
             onClick={() => onFolderClick && onFolderClick(folder.id)}
-            className="group bg-slate-900/20 hover:bg-slate-800/40 border border-slate-800/80 hover:border-slate-700/60 rounded-xl p-3.5 flex items-center justify-between transition cursor-pointer shadow-xs"
+            className="group bg-slate-900/20 hover:bg-slate-800/40 border border-slate-800/80 hover:border-slate-700/60 rounded-xl p-3 sm:p-3.5 flex items-center justify-between transition cursor-pointer shadow-xs"
           >
-            <div className="flex items-center gap-3 min-w-0">
-              <span className="p-2.5 rounded-lg bg-slate-950 text-indigo-400 border border-slate-850 group-hover:bg-indigo-500/10 group-hover:text-indigo-300 transition shrink-0">
-                <FolderIcon className="w-5 h-5" />
+            <div className="flex items-center gap-2.5 min-w-0 pr-1">
+              <span className="p-2 rounded-lg bg-slate-950 text-indigo-400 border border-slate-850 group-hover:bg-indigo-500/10 group-hover:text-indigo-300 transition shrink-0">
+                <FolderIcon className="w-4 h-4 sm:w-5 sm:h-5" />
               </span>
               <div className="flex flex-col min-w-0">
                 <span className="text-xs font-semibold text-slate-200 truncate" title={folder.name}>
@@ -35,15 +35,15 @@ export default function FileGrid({
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5 shrink-0">
               <button
                 onClick={(e) => onToggleStar(folder.id, e)}
-                className="p-1.5 rounded hover:bg-slate-800/50 text-slate-650 hover:text-amber-400 transition"
+                className="p-1 rounded hover:bg-slate-800/50 text-slate-650 hover:text-amber-400 transition"
               >
                 {folder.starred ? <StarIconSolid /> : <StarIconOutline />}
               </button>
               <button
-                className="p-1.5 rounded hover:bg-slate-800/50 text-slate-500 hover:text-white transition"
+                className="p-1 rounded hover:bg-slate-800/50 text-slate-500 hover:text-white transition"
                 onClick={(e) => {
                   e.stopPropagation();
                   onRenameFolder(folder.id, folder.name);
@@ -55,7 +55,7 @@ export default function FileGrid({
                 </svg>
               </button>
               <button
-                className="p-1.5 rounded hover:bg-slate-800/50 text-slate-500 hover:text-red-400 transition shrink-0"
+                className="p-1 rounded hover:bg-slate-800/50 text-slate-500 hover:text-red-400 transition shrink-0"
                 onClick={(e) => {
                   e.stopPropagation();
                   onDeleteFolder(folder.id);
@@ -75,7 +75,7 @@ export default function FileGrid({
 
   // viewType === 'file'
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+    <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
       {items.map(file => (
         <div
           key={file.id}

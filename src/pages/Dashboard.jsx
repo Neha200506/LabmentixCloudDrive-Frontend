@@ -1398,7 +1398,7 @@ export default function Dashboard({ onNavigate, user }) {
             />
 
             {/* SCROLLABLE WORKSPACE WINDOW */}
-            <div className="flex-1 overflow-y-auto p-6 bg-slate-950/20">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-6 bg-slate-950/20">
 
               {isLoading ? (
                 /* LOADING SHIMMER */

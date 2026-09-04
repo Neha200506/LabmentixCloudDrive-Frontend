@@ -174,14 +174,14 @@ export default function HomeSection({
               <div 
                 key={item.id} 
                 onClick={() => item.type === 'file' && onPreviewFile(item)}
-                className={`p-3 flex items-center justify-between gap-4 text-xs hover:bg-slate-800/35 transition ${item.type === 'file' ? 'cursor-pointer hover:text-indigo-400' : ''}`}
+                className={`p-2.5 sm:p-3 flex items-center justify-between gap-2 sm:gap-4 text-xs hover:bg-slate-800/35 transition ${item.type === 'file' ? 'cursor-pointer hover:text-indigo-400' : ''}`}
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <span>{item.type === 'folder' ? <FolderIcon className="w-4 h-4 text-indigo-400" /> : getFileIcon(item.extension)}</span>
-                  <span className="font-medium text-slate-350 truncate">{item.name}</span>
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                  <span className="shrink-0">{item.type === 'folder' ? <FolderIcon className="w-4 h-4 text-indigo-400" /> : getFileIcon(item.extension)}</span>
+                  <span className="font-medium text-slate-350 truncate max-w-[120px] xs:max-w-[200px] sm:max-w-none">{item.name}</span>
                 </div>
-                <div className="flex items-center gap-6 shrink-0 text-slate-500">
-                  <span>{item.lastActionType || 'Modified'} {item.updatedAt}</span>
+                <div className="flex items-center gap-2 sm:gap-6 shrink-0 text-slate-500 text-[11px] sm:text-xs">
+                  <span className="whitespace-nowrap">{item.lastActionType || 'Modified'} {item.updatedAt}</span>
                   <span className="hidden sm:inline w-16 text-right font-medium text-slate-400">{item.size}</span>
                 </div>
               </div>
