@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { API_BASE_URL } from '../config';
 
 export default function Login({ onNavigate }) {
   const [email, setEmail] = useState('');
@@ -27,7 +28,7 @@ export default function Login({ onNavigate }) {
 
     setForgotSubmitting(true);
     try {
-      const response = await fetch('http://localhost:8080/api/auth/forgot-password', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: forgotEmail.trim() }),
@@ -76,7 +77,7 @@ export default function Login({ onNavigate }) {
 
     try {
       const response = await fetch(
-        'http://localhost:8080/api/auth/login',
+        `${API_BASE_URL}/api/auth/login`,
         {
           method: 'POST',
           headers: {

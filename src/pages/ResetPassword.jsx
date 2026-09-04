@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { API_BASE_URL } from '../config';
 
 export default function ResetPassword({ token, onNavigate }) {
   const [newPassword, setNewPassword] = useState('');
@@ -37,7 +38,7 @@ export default function ResetPassword({ token, onNavigate }) {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('http://localhost:8080/api/auth/reset-password', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

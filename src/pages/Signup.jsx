@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { API_BASE_URL } from '../config';
 
 export default function Signup({ onNavigate }) {
   const [name, setName] = useState('');
@@ -79,7 +80,7 @@ export default function Signup({ onNavigate }) {
 
     try {
       const response = await fetch(
-        'http://localhost:8080/api/auth/signup',
+        `${API_BASE_URL}/api/auth/signup`,
         {
           method: 'POST',
           headers: {

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { API_BASE_URL } from '../config';
 
 export default function FilePreviewModal({
   selectedPreviewFile,
@@ -60,7 +61,7 @@ export default function FilePreviewModal({
       setPdfLoading(true);
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch(`http://localhost:8080/api/files/${selectedPreviewFile.id}/pdf-text`, {
+        const res = await fetch(`${API_BASE_URL}/api/files/${selectedPreviewFile.id}/pdf-text`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();

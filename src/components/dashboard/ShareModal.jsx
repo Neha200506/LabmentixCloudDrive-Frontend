@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../../config';
 
 export default function ShareModal({ file, onClose, showNotification }) {
   const [email, setEmail] = useState('');
@@ -26,7 +27,7 @@ export default function ShareModal({ file, onClose, showNotification }) {
     if (!file) return;
     setLoadingUsers(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/share/file/${file.id}/users`, {
+      const response = await fetch(`${API_BASE_URL}/api/share/file/${file.id}/users`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -64,7 +65,7 @@ export default function ShareModal({ file, onClose, showNotification }) {
 
     setSharing(true);
     try {
-      const response = await fetch('http://localhost:8080/api/share/file', {
+      const response = await fetch(`${API_BASE_URL}/api/share/file`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -96,7 +97,7 @@ export default function ShareModal({ file, onClose, showNotification }) {
   // Update user permission
   const handleUpdatePermission = async (userId, newPermission) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/share/file/${file.id}/permission`, {
+      const response = await fetch(`${API_BASE_URL}/api/share/file/${file.id}/permission`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -126,7 +127,7 @@ export default function ShareModal({ file, onClose, showNotification }) {
     if (!confirm(`Are you sure you want to remove access for ${userEmail}?`)) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/share/file/${file.id}/permission/${userId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/share/file/${file.id}/permission/${userId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -150,7 +151,7 @@ export default function ShareModal({ file, onClose, showNotification }) {
   const handleGenerateLink = async () => {
     setGeneratingLink(true);
     try {
-      const response = await fetch('http://localhost:8080/api/share/', {
+      const response = await fetch(`${API_BASE_URL}/api/share/`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

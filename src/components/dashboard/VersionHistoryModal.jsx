@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { formatSize } from '../../utils/dashboardUtils';
+import { API_BASE_URL } from '../../config';
 
 export default function VersionHistoryModal({ file, onClose, onRestoreSuccess, showNotification }) {
   const [versions, setVersions] = useState([]);
@@ -13,7 +14,7 @@ export default function VersionHistoryModal({ file, onClose, onRestoreSuccess, s
   const fetchVersions = useCallback(async () => {
     if (!file) return;
     try {
-      const response = await fetch(`http://localhost:8080/api/files/${file.id}/versions`, {
+      const response = await fetch(`${API_BASE_URL}/api/files/${file.id}/versions`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -39,7 +40,7 @@ export default function VersionHistoryModal({ file, onClose, onRestoreSuccess, s
 
     const load = async () => {
       try {
-        const response = await fetch(`http://localhost:8080/api/files/${file.id}/versions`, {
+        const response = await fetch(`${API_BASE_URL}/api/files/${file.id}/versions`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -75,7 +76,7 @@ export default function VersionHistoryModal({ file, onClose, onRestoreSuccess, s
   const handleOpenVersionUrl = async (versionId) => {
     setLoadingUrlId(versionId);
     try {
-      const response = await fetch(`http://localhost:8080/api/files/${file.id}/versions/${versionId}/url`, {
+      const response = await fetch(`${API_BASE_URL}/api/files/${file.id}/versions/${versionId}/url`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -102,7 +103,7 @@ export default function VersionHistoryModal({ file, onClose, onRestoreSuccess, s
     if (!window.confirm(`Are you sure you want to restore Version ${versionNumber}?`)) return;
     setRestoringId(versionId);
     try {
-      const response = await fetch(`http://localhost:8080/api/files/${file.id}/versions/${versionId}/restore`, {
+      const response = await fetch(`${API_BASE_URL}/api/files/${file.id}/versions/${versionId}/restore`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

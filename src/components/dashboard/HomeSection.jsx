@@ -1,12 +1,67 @@
 import { FolderIcon, StarIconSolid, StarIconOutline } from '../Icons';
 import { getFileIcon } from '../../utils/dashboardUtils';
+import FileGrid from './FileGrid';
 
 export default function HomeSection({
   items,
   onPreviewFile,
   onToggleStar,
   onShareFile,
+  onFolderClick,
+  onRenameFolder,
+  onDeleteFolder,
+  onRenameFile,
+  onDeleteFile,
+  viewMode,
 }) {
+  if (viewMode === 'grid') {
+    const folderItems = items.filter(item => item.type === 'folder');
+    const fileItems = items.filter(item => item.type === 'file');
+
+    return (
+      <div className="space-y-6">
+        {folderItems.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-1 text-slate-400">
+              <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+              <span className="text-xs font-bold tracking-wide text-slate-400">Folders</span>
+            </div>
+            <FileGrid
+              items={folderItems}
+              viewType="folder"
+              onFolderClick={onFolderClick}
+              onToggleStar={onToggleStar}
+              onRenameFolder={onRenameFolder}
+              onDeleteFolder={onDeleteFolder}
+            />
+          </div>
+        )}
+
+        {fileItems.length > 0 && (
+          <div className="space-y-3 mt-6">
+            <div className="flex items-center gap-1 text-slate-400">
+              <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+              <span className="text-xs font-bold tracking-wide text-slate-400">Suggested files</span>
+            </div>
+            <FileGrid
+              items={fileItems}
+              viewType="file"
+              onPreviewFile={onPreviewFile}
+              onToggleStar={onToggleStar}
+              onRenameFile={onRenameFile}
+              onDeleteFile={onDeleteFile}
+              onShareFile={onShareFile}
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
+
   const suggestedFiles = items
     .filter(item => !item.inTrash && item.type === 'file')
     .map(file => {

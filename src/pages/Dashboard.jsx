@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, lazy } from 'react';
 import mammoth from 'mammoth';
+import { API_BASE_URL } from '../config';
 
 import {
   GridIcon,
@@ -178,7 +179,7 @@ export default function Dashboard({ onNavigate, user }) {
     formData.append("file", file);
 
     try {
-      const response = await fetch("http://localhost:8080/api/files/upload", {
+      const response = await fetch(`${API_BASE_URL}/api/files/upload`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -243,7 +244,7 @@ export default function Dashboard({ onNavigate, user }) {
         currentParentId = existingFolder.id;
       } else {
         const token = localStorage.getItem("token");
-        const response = await fetch("http://localhost:8080/api/folders", {
+        const response = await fetch(`${API_BASE_URL}/api/folders`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -313,7 +314,7 @@ export default function Dashboard({ onNavigate, user }) {
         }
         formData.append("file", file);
 
-        const response = await fetch("http://localhost:8080/api/files/upload", {
+        const response = await fetch(`${API_BASE_URL}/api/files/upload`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -375,7 +376,7 @@ export default function Dashboard({ onNavigate, user }) {
     const isDocx = ['docx', 'doc'].includes(file.extension);
 
     try {
-      const response = await fetch(`http://localhost:8080/api/files/${file.id}/url`, {
+      const response = await fetch(`${API_BASE_URL}/api/files/${file.id}/url`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -477,9 +478,9 @@ export default function Dashboard({ onNavigate, user }) {
       if (!token) return;
 
       // 1. Fetch folders
-      let foldersUrl = 'http://localhost:8080/api/folders';
+      let foldersUrl = `${API_BASE_URL}/api/folders`;
       if (activeTab === 'trash') {
-        foldersUrl = 'http://localhost:8080/api/folders/trash';
+        foldersUrl = `${API_BASE_URL}/api/folders/trash`;
       }
 
       const foldersRes = await fetch(foldersUrl, {
@@ -489,9 +490,9 @@ export default function Dashboard({ onNavigate, user }) {
       const backendFolders = foldersData.folders || [];
 
       // 2. Fetch files
-      let filesUrl = 'http://localhost:8080/api/files?limit=1000';
+      let filesUrl = `${API_BASE_URL}/api/files?limit=1000`;
       if (activeTab === 'trash') {
-        filesUrl = 'http://localhost:8080/api/files/trash';
+        filesUrl = `${API_BASE_URL}/api/files/trash`;
       }
 
       const filesRes = await fetch(filesUrl, {
@@ -523,7 +524,7 @@ export default function Dashboard({ onNavigate, user }) {
         inTrash: activeTab === 'trash' || file.deleted_at !== null,
         createdAt: file.created_at || new Date().toISOString(),
         updatedAt: file.created_at ? new Date(file.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        owner: file.is_shared ? (file.owner_name || 'Owner') : 'me',
+        owner: file.is_shared ? (file.owner_id || file.owner_name || 'Owner') : 'me',
         shared: Boolean(file.is_shared),
         shared_permission: file.shared_permission,
         permission: file.shared_permission || 'owner',
@@ -614,7 +615,7 @@ export default function Dashboard({ onNavigate, user }) {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/api/folders/${folderId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/folders/${folderId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -640,7 +641,7 @@ export default function Dashboard({ onNavigate, user }) {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/api/folders/${folderId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/folders/${folderId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -672,7 +673,7 @@ export default function Dashboard({ onNavigate, user }) {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/api/files/${fileId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/files/${fileId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -705,7 +706,7 @@ export default function Dashboard({ onNavigate, user }) {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/api/files/${fileId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/files/${fileId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -768,6 +769,46 @@ export default function Dashboard({ onNavigate, user }) {
 
   // Dropdown helper inputs/states
   const [peopleSearch, setPeopleSearch] = useState('');
+  const [peopleOptions, setPeopleOptions] = useState([]);
+  const filteredPeople = peopleOptions.filter(p =>
+    p.name.toLowerCase().includes(peopleSearch.toLowerCase()) ||
+    p.email.toLowerCase().includes(peopleSearch.toLowerCase())
+  );
+  useEffect(() => {
+    const fetchPeople = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+  
+        const response = await fetch(`${API_BASE_URL}/api/auth/users`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+  
+        const data = await response.json();
+  
+        if (response.ok) {
+          const users = (data.users || []).map(user => ({
+            id: user.id,
+            name: user.full_name || user.email,
+            email: user.email,
+            initials: (user.full_name || user.email)
+              .split(' ')
+              .map(part => part[0])
+              .join('')
+              .slice(0, 2)
+              .toUpperCase(),
+          }));
+  
+          setPeopleOptions(users);
+        }
+      } catch (error) {
+      console.error('Failed to fetch people:', error);
+      }
+    };
+    fetchPeople();
+  }, []);
   const [tempModified, setTempModified] = useState('all');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
@@ -829,7 +870,7 @@ export default function Dashboard({ onNavigate, user }) {
     try {
       const token = localStorage.getItem('token');
       const route = item.type === 'folder' ? 'folders' : 'files';
-      const response = await fetch(`http://localhost:8080/api/${route}/${itemId}/star`, {
+      const response = await fetch(`${API_BASE_URL}/api/${route}/${itemId}/star`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`
@@ -860,7 +901,7 @@ export default function Dashboard({ onNavigate, user }) {
     try {
       const token = localStorage.getItem('token');
       const route = item.type === 'folder' ? 'folders' : 'files';
-      const response = await fetch(`http://localhost:8080/api/${route}/${itemId}/restore`, {
+      const response = await fetch(`${API_BASE_URL}/api/${route}/${itemId}/restore`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`
@@ -890,7 +931,7 @@ export default function Dashboard({ onNavigate, user }) {
     try {
       const token = localStorage.getItem('token');
       const route = item.type === 'folder' ? 'folders' : 'files';
-      const response = await fetch(`http://localhost:8080/api/${route}/${itemId}/permanent`, {
+      const response = await fetch(`${API_BASE_URL}/api/${route}/${itemId}/permanent`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`
@@ -1123,15 +1164,6 @@ export default function Dashboard({ onNavigate, user }) {
   }, [activeFilesForStorage]);
 
   // People dropdown lists search filter
-  const peopleOptions = [
-    { id: 'Alex Rivera', name: 'Alex Rivera', email: 'alex.rivera@nexora.io', initials: 'AR' },
-    { id: 'Sarah Jenkins', name: 'Sarah Jenkins', email: 'sarah.j@nexora.io', initials: 'SJ' },
-    { id: 'Michael Chen', name: 'Michael Chen', email: 'michael.c@nexora.io', initials: 'MC' },
-  ];
-  const filteredPeople = peopleOptions.filter(p =>
-    p.name.toLowerCase().includes(peopleSearch.toLowerCase()) ||
-    p.email.toLowerCase().includes(peopleSearch.toLowerCase())
-  );
 
   const handleCreateFolderPrompt = async () => {
     const folderName = prompt("Enter folder name:");
@@ -1139,7 +1171,7 @@ export default function Dashboard({ onNavigate, user }) {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:8080/api/folders", {
+      const response = await fetch(`${API_BASE_URL}/api/folders`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1169,7 +1201,7 @@ export default function Dashboard({ onNavigate, user }) {
   const handleSaveFileContent = async (fileId, newContent) => {
     try {
       const jwtToken = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:8080/api/files/${fileId}/content`, {
+      const res = await fetch(`${API_BASE_URL}/api/files/${fileId}/content`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -1527,6 +1559,12 @@ export default function Dashboard({ onNavigate, user }) {
                       onPreviewFile={handlePreviewFile}
                       onToggleStar={handleToggleStar}
                       onShareFile={setSelectedShareFile}
+                      onFolderClick={handleFolderClick}
+                      onRenameFolder={handleRenameFolderPrompt}
+                      onDeleteFolder={handleDeleteFolder}
+                      onRenameFile={handleRenameFilePrompt}
+                      onDeleteFile={handleDeleteFile}
+                      viewMode={viewMode}
                     />
                   )}
 
@@ -1618,9 +1656,14 @@ export default function Dashboard({ onNavigate, user }) {
                       onToggleStar={handleToggleStar}
                       onPreviewFile={handlePreviewFile}
                       onShareFile={setSelectedShareFile}
+                      onRenameFolder={handleRenameFolderPrompt}
+                      onDeleteFolder={handleDeleteFolder}
+                      onRenameFile={handleRenameFilePrompt}
+                      onDeleteFile={handleDeleteFile}
                       sortBy={sortBy}
                       sortOrder={sortOrder}
                       onSort={handleSortChange}
+                      viewMode={viewMode}
                     />
                   )}
 
