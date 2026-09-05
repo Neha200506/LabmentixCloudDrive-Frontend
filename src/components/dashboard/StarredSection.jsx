@@ -9,6 +9,7 @@ export default function StarredSection({
   onToggleStar,
   onPreviewFile,
   onShareFile,
+  onDownloadFile,
   onRenameFolder,
   onDeleteFolder,
   onRenameFile,
@@ -73,6 +74,7 @@ export default function StarredSection({
               onRenameFile={onRenameFile}
               onDeleteFile={onDeleteFile}
               onShareFile={onShareFile}
+              onDownloadFile={onDownloadFile}
             />
           ) : (
             <FileList
@@ -81,6 +83,7 @@ export default function StarredSection({
               onPreviewFile={onPreviewFile}
               onToggleStar={onToggleStar}
               onShareFile={onShareFile}
+              onDownloadFile={onDownloadFile}
               sortBy={sortBy}
               sortOrder={sortOrder}
               onSort={onSort}

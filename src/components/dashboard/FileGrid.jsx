@@ -1,4 +1,4 @@
-import { FolderIcon, StarIconSolid, StarIconOutline } from '../Icons';
+import { FolderIcon, StarIconSolid, StarIconOutline, DownloadIcon } from '../Icons';
 import { getFileIcon } from '../../utils/dashboardUtils';
 
 export default function FileGrid({
@@ -12,6 +12,7 @@ export default function FileGrid({
   onRenameFile,
   onDeleteFile,
   onShareFile,
+  onDownloadFile,
 }) {
   if (viewType === 'folder') {
     return (
@@ -96,6 +97,16 @@ export default function FileGrid({
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
                 </svg>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDownloadFile && onDownloadFile(file, e);
+                }}
+                className="text-slate-400 hover:text-white p-0.5 rounded transition shrink-0"
+                title="Download file"
+              >
+                <DownloadIcon className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={(e) => onToggleStar(file.id, e)}

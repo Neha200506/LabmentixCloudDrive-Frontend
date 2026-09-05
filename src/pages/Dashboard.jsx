@@ -452,6 +452,45 @@ export default function Dashboard({ onNavigate, user }) {
     }
   };
 
+  const handleDownloadFile = async (file, e) => {
+    if (e) e.stopPropagation();
+    if (!file) return;
+
+    try {
+      showNotification("success", `Preparing download for "${file.name}"...`);
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE_URL}/api/files/${file.id}/url`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.url) {
+        throw new Error(data.message || "Failed to generate download URL");
+      }
+
+      const fileRes = await fetch(data.url);
+      if (!fileRes.ok) {
+        throw new Error("Failed to fetch file content");
+      }
+
+      const blob = await fileRes.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.setAttribute("download", file.name);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+      showNotification("success", `Downloaded "${file.name}" successfully!`);
+    } catch (error) {
+      console.error("Download file error:", error);
+      showNotification("error", error.message || "Failed to download file");
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
@@ -1530,6 +1569,7 @@ export default function Dashboard({ onNavigate, user }) {
                               onRenameFile={handleRenameFilePrompt}
                               onDeleteFile={handleDeleteFile}
                               onShareFile={setSelectedShareFile}
+                              onDownloadFile={handleDownloadFile}
                               sortBy={sortBy}
                               sortOrder={sortOrder}
                               onSort={handleSortChange}
@@ -1543,6 +1583,7 @@ export default function Dashboard({ onNavigate, user }) {
                               onRenameFile={handleRenameFilePrompt}
                               onDeleteFile={handleDeleteFile}
                               onShareFile={setSelectedShareFile}
+                              onDownloadFile={handleDownloadFile}
                             />
                           )}
                         </div>
@@ -1559,6 +1600,7 @@ export default function Dashboard({ onNavigate, user }) {
                       onPreviewFile={handlePreviewFile}
                       onToggleStar={handleToggleStar}
                       onShareFile={setSelectedShareFile}
+                      onDownloadFile={handleDownloadFile}
                       onFolderClick={handleFolderClick}
                       onRenameFolder={handleRenameFolderPrompt}
                       onDeleteFolder={handleDeleteFolder}
@@ -1604,6 +1646,7 @@ export default function Dashboard({ onNavigate, user }) {
                           activeTab="shared"
                           onPreviewFile={handlePreviewFile}
                           onShareFile={setSelectedShareFile}
+                          onDownloadFile={handleDownloadFile}
                           sortBy={sortBy}
                           sortOrder={sortOrder}
                           onSort={handleSortChange}
@@ -1614,6 +1657,7 @@ export default function Dashboard({ onNavigate, user }) {
                           viewType="file"
                           onPreviewFile={handlePreviewFile}
                           onShareFile={setSelectedShareFile}
+                          onDownloadFile={handleDownloadFile}
                         />
                       )}
                     </div>
@@ -1630,6 +1674,7 @@ export default function Dashboard({ onNavigate, user }) {
                           activeTab="recent"
                           onPreviewFile={handlePreviewFile}
                           onShareFile={setSelectedShareFile}
+                          onDownloadFile={handleDownloadFile}
                           sortBy={sortBy}
                           sortOrder={sortOrder}
                           onSort={handleSortChange}
@@ -1640,6 +1685,7 @@ export default function Dashboard({ onNavigate, user }) {
                           viewType="file"
                           onPreviewFile={handlePreviewFile}
                           onShareFile={setSelectedShareFile}
+                          onDownloadFile={handleDownloadFile}
                         />
                       )}
                     </div>
@@ -1656,6 +1702,7 @@ export default function Dashboard({ onNavigate, user }) {
                       onToggleStar={handleToggleStar}
                       onPreviewFile={handlePreviewFile}
                       onShareFile={setSelectedShareFile}
+                      onDownloadFile={handleDownloadFile}
                       onRenameFolder={handleRenameFolderPrompt}
                       onDeleteFolder={handleDeleteFolder}
                       onRenameFile={handleRenameFilePrompt}
